@@ -3,11 +3,12 @@ import astropy.coordinates as coord
 from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
-from velocity import vsun, _u, _v, _w
 import scipy.interpolate as interp
 import util_toolkit as util
 import os
 from tqdm import tqdm
+
+from .velocity import vsun, _u, _v, _w
 
 def _is_quantity(q, t=None):
     """
