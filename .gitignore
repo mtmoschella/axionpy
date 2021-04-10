@@ -1,6 +1,6 @@
 *
-*/*
-!*.gitignore
-!*.py
+!.gitignore
+!axionpy/
+!axionpy/*.py
 !tests/
 !tests/*.py
