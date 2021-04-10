@@ -199,30 +199,13 @@ class Axis:
                     Time steps shorter than this will be evaluated using interpolation.
                     Defaults to 30 minutes.
 
-        buffersize : numeric
-                     Maximum length of arrays to read into memory at one time.
-                     Defaults to 1e7. Automatically cast to int.
-
-        fname : str
-                Name of output memmap file.
-                Defaults to 'components.dat'
-
-        overwrite : bool
-                    Whether or not to overwrite memmap file if it already exists.
-                    Defaults to False if fname is specified in kwargs,
-                    Defaults to True otherwise.
-        
-        pbar : bool
-               Whether or not to show tqdm progress bar.
-               Defaults to True.
-
         ================================
         Output
         --------------------------------
-        Returns a memmap of shape (3,N) such that
-        output[0,:] = x component
-        output[1,:] = y component
-        output[2,:] = z component
+        Returns a numpy.array of shape (3,N) such that
+        output[0,:] = x component (N,)
+        output[1,:] = y component (N,)
+        output[2,:] = z component (N,)
         """
 
         # parse required kwargs
@@ -276,90 +259,47 @@ class Axis:
         else:
             tstep_min = 30.*u.min
 
-        if 'buffersize' in kwargs:
-            buffersize = int(kwargs['buffersize'])
+        output = np.empty((3,N))
+
+        # decide whether or not to interpolate
+        if dt is None:
+            # full time series specified
+            deltat = np.amax(t)-np.amin(t)
         else:
-            buffersize = int(1.e7)
-
-        if 'fname' in kwargs:
-            fname = str(kwargs['fname'])
-        else:
-            fname = 'components.dat'
-
-        if 'overwrite' in kwargs:
-            overwrite = bool(kwargs['overwrite'])
-        else:
-            overwrite = 'fname' not in kwargs
-
-        if 'pbar' in kwargs:
-            pbar = bool(kwargs['pbar'])
-        else:
-            pbar = True
-
-        if overwrite or not os.path.exists(fname):
-            memmap = np.memmap(fname, dtype=float, mode='w+', shape=(3,N))
-
-            # decide whether or not to interpolate
-            if dt is None:
-                # full time series specified
-                deltat = np.amax(t)-np.amin(t)
-            else:
-                # N, dt specified
-                deltat = N*dt
-            use_interp = N*tstep_min > deltat
+            # N, dt specified
+            deltat = N*dt
+        use_interp = N*tstep_min > deltat
             
-            if not use_interp:
-                # don't interpolate
-                # just evaluate time series directly
-                i=0
-                if pbar: bar=tqdm(total=int(np.ceil(N/buffersize)))
-                while i<N:
-                    n = min(buffersize, N-i)
-                    if dt is None:
-                        dirs = self._dir(epoch+t[i:i+n]) # (3, n)
-                    else:
-                        dirs = self._time_series(epoch+i*dt, n, dt) # (3, n)
-                    memmap[0,i:i+n] = np.einsum('ij,i->j', dirs, xhat) # (n,)
-                    memmap[1,i:i+n] = np.einsum('ij,i->j', dirs, yhat) # (n,)
-                    memmap[2,i:i+n] = np.einsum('ij,i->j', dirs, zhat) # (n,)
-                    i += n
-                    if pbar: bar.update(1)
-                if pbar: bar.close()
+        if not use_interp:
+            # don't interpolate
+            # just evaluate time series directly
+            if dt is None:
+                dirs = self._dir(epoch+t) # (3, N)
             else:
-                # use interpolation
-                M = int(1+np.ceil((deltat/tstep_min)))
-                if M>buffersize:
-                    raise Exception("ERROR: interpolation beyond buffersize is not supported")
-                else:
-                    # M is small enough to read into memory directly
-                    tguess = (1./49.)*M # guess how long to compute interpolation points
-                    if tguess>5.:
-                        print("Computing "+str(M)+" interpolation points. Should take less than "+str(tguess)+" s")
-                    dirs = self._time_series(epoch, M, tstep_min) # (3, M)
-                    x = np.einsum('ij,i->j', dirs, xhat) # (M,)
-                    y = np.einsum('ij,i->j', dirs, yhat) # (M,)
-                    z = np.einsum('ij,i->j', dirs, zhat) # (M,)
+                dirs = self._time_series(epoch, N, dt) # (3, N)
+            output[0,:] = np.einsum('ij,i->j', dirs, xhat) # (N,)
+            output[1,:] = np.einsum('ij,i->j', dirs, yhat) # (N,)
+            output[2,:] = np.einsum('ij,i->j', dirs, zhat) # (N,)
+        else:
+            # use interpolation
+            M = int(1+np.ceil((deltat/tstep_min)))
+            
+            dirs = self._time_series(epoch, M, tstep_min) # (3, M)
+            x = np.einsum('ij,i->j', dirs, xhat) # (M,)
+            y = np.einsum('ij,i->j', dirs, yhat) # (M,)
+            z = np.einsum('ij,i->j', dirs, zhat) # (M,)
 
-                    tstepped = np.arange(M)*tstep_min.to_value(u.s) # (M,)
-                    x_tck = interp.splrep(tstepped, x)
-                    y_tck = interp.splrep(tstepped, y)
-                    z_tck = interp.splrep(tstepped, z)
+            tstepped = np.arange(M)*tstep_min.to_value(u.s) # (M,)
+            x_tck = interp.splrep(tstepped, x)
+            y_tck = interp.splrep(tstepped, y)
+            z_tck = interp.splrep(tstepped, z)
 
-                    i=0
-                    if pbar: bar=tqdm(total=int(np.ceil(N/buffersize)))
-                    while i<N:
-                        n = min(buffersize, N-i)
-                        if dt is None:
-                            t_eval = epoch+t[i:i+n]
-                        else:
-                            t_eval = np.arange(i,i+n)*dt.to_value(u.s) # (N,)
-                        memmap[0,i:i+n] = interp.splev(t_eval, x_tck) # (N,)
-                        memmap[1,i:i+n] = interp.splev(t_eval, y_tck) # (N,)
-                        memmap[2,i:i+n] = interp.splev(t_eval, z_tck) # (N,)
-                        i += n
-                        if pbar: bar.update(1)
-                    if pbar: bar.close()
-            del memmap
-        output = np.memmap(fname, dtype=float, mode='r', shape=(3,N))
+            if dt is None:
+                t_eval = epoch+t
+            else:
+                t_eval = np.arange(N)*dt.to_value(u.s) # (N,)
+            output[0,:] = interp.splev(t_eval, x_tck) # (N,)
+            output[1,:] = interp.splev(t_eval, y_tck) # (N,)
+            output[2,:] = interp.splev(t_eval, z_tck) # (N,)
         return output
     
