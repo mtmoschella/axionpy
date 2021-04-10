@@ -9,6 +9,26 @@ import util_toolkit as util
 import os
 from tqdm import tqdm
 
+def _is_quantity(q, t=None):
+    """
+    Verifies if the argument is an astropy.Quantity of the specified type
+    
+    q: astropy.Quantity (expected)
+       Argument to check type
+
+    t: string, optional
+       If specified, additionally requires the physical_type of the quantity to match t
+    
+    Returns: bool
+             True if the specified quantity matches.
+             False if not.
+    """
+    if not isinstance(q, u.Quantity):
+        return False
+    if t is not None:
+        return q.unit.physical_type==t
+    return True
+
 def _unit(arr):
     """
     arr: numpy ndarray
@@ -137,32 +157,167 @@ class Axis:
         """
         t = tstart + np.arange(M)*tstep
         return self._dir(t)
-        
-    def components(self, N, dt, start='2020-01-01T00:00:00', xhat=_x, yhat=_y, zhat=_z, tstep_min=0.5*u.hr, buffersize=int(1.e7), fname='components.dat', overwrite=False, pbar=True):
-        """
-        N: size of time series
-        dt: astropy.quantity (time)
-        start: date/time string or astropy Time
-        xhat, yhat, zhat: basis to get components
 
+    #def components(self, N=None, dt=None, tgrid=None, start='2020-01-01T00:00:00', xhat=_x, yhat=_y, zhat=_z, tstep_min=0.5*u.hr, buffersize=int(1.e7), fname='components.dat', overwrite=False, pbar=True):    
+    def components(self, **kwargs):
+        """
+        ===========================
+        Required kwargs: 
+        Either N and dt or t must be specified.
+        --------------------------
+        N : int 
+            Size of time series
+
+        dt : astropy.Quantity
+             Time step of time series
+
+        t : (N,) astropy.Quantity 
+            Full time series 
+
+        ==========================
+        optional kwargs
+        --------------------------
+        epoch: str or astropy.Time
+               Epoch specifying the starting time. Defaults to J2000. 
+               All times are measured from this epoch.
+
+        xhat : (3,) array-like
+               x basis vector in galactic {u,v,w} coordinates.
+               Defaults to _x.
+
+        yhat : (3,) array-like
+               y basis vector in galactic {u,v,w} coordinates.
+               Defaults to _y.
+
+        zhat : (3,) array-like
+               z basis vector in galactic {u,v,w} coordinates. 
+               Defaults to _z.
+
+        tstep_min : astropy.Quantity
+                    Minimum time step for using full astropy EarthLocation evaluation. 
+                    Time steps shorter than this will be evaluated using interpolation.
+                    Defaults to 30 minutes.
+
+        buffersize : numeric
+                     Maximum length of arrays to read into memory at one time.
+                     Defaults to 1e7. Automatically cast to int.
+
+        fname : str
+                Name of output memmap file.
+                Defaults to 'components.dat'
+
+        overwrite : bool
+                    Whether or not to overwrite memmap file if it already exists.
+                    Defaults to False if fname is specified in kwargs,
+                    Defaults to True otherwise.
+        
+        pbar : bool
+               Whether or not to show tqdm progress bar.
+               Defaults to True.
+
+        ================================
+        Output
+        --------------------------------
         Returns a memmap of shape (3,N) such that
         output[0,:] = x component
         output[1,:] = y component
         output[2,:] = z component
         """
 
+        # parse required kwargs
+        if "N" in kwargs and "dt" in kwargs:
+            N = int(kwargs["N"])
+            dt = kwargs["dt"]
+            if not _is_quantity(dt, "time"):
+                raise Exception("ERROR: dt is required to be an astropy.Quantity of time")
+        elif "t" in kwargs:
+            t = kwargs["t"]
+            N = len(t)
+            dt = None
+            if not _isquantity(t, "time"):
+                raise Exception("ERROR: t is required to be an astropy.Quantity of time")
+        else:
+            raise Exception("ERROR: Invalid kwargs. Must specify either N and dt or t.")
+
+        # parse optional kwargs
+        if 'epoch' in kwargs:
+            epoch = kwargs['epoch']
+            if not isinstance(epoch, Time):
+                epoch = Time(epoch)
+        else:
+             epoch = Time("J2000.0")
+
+        if 'xhat' in kwargs:
+            xhat = np.asarray(kwargs['xhat'])
+            if xhat.shape!=(3,):
+                raise Exception("ERROR: xhat must have shape (3,)")
+        else:
+            xhat = _x
+
+        if 'yhat' in kwargs:
+            yhat = np.asarray(kwargs['yhat'])
+            if yhat.shape!=(3,):
+                raise Exception("ERROR: yhat must have shape (3,)")
+        else:
+            yhat = _y
+
+        if 'zhat' in kwargs:
+            zhat = np.asarray(kwargs['zhat'])
+            if zhat.shape!=(3,):
+                raise Exception("ERROR: zhat must have shape (3,)")            
+        else:
+            zhat = _zhat
+
+        if 'tstep_min' in kwargs:
+            tstep_min = kwargs['tstep_min']
+            if not _is_quantity(tstep_min, "time"):
+                raise Exception("ERROR: tstep_min is required to be an astropy.Quantity of time")
+        else:
+            tstep_min = 30.*u.min
+
+        if 'buffersize' in kwargs:
+            buffersize = int(kwargs['buffersize'])
+        else:
+            buffersize = int(1.e7)
+
+        if 'fname' in kwargs:
+            fname = str(kwargs['fname'])
+        else:
+            fname = 'components.dat'
+
+        if 'overwrite' in kwargs:
+            overwrite = bool(kwargs['overwrite'])
+        else:
+            overwrite = 'fname' not in kwargs
+
+        if 'pbar' in kwargs:
+            pbar = bool(kwargs['pbar'])
+        else:
+            pbar = True
+
         if overwrite or not os.path.exists(fname):
             memmap = np.memmap(fname, dtype=float, mode='w+', shape=(3,N))
+
+            # decide whether or not to interpolate
+            if dt is None:
+                # full time series specified
+                deltat = np.amax(t)-np.amin(t)
+            else:
+                # N, dt specified
+                deltat = N*dt
+            use_interp = N*tstep_min > deltat
             
-            tstart = Time(start)
-            
-            if dt>tstep_min:
+            if not use_interp:
                 # don't interpolate
+                # just evaluate time series directly
                 i=0
                 if pbar: bar=tqdm(total=int(np.ceil(N/buffersize)))
                 while i<N:
                     n = min(buffersize, N-i)
-                    dirs = self._time_series(tstart+i*dt, n, dt) # (3, n)
+                    if dt is None:
+                        dirs = self._dir(epoch+t[i:i+n]) # (3, n)
+                    else:
+                        dirs = self._time_series(epoch+i*dt, n, dt) # (3, n)
                     memmap[0,i:i+n] = np.einsum('ij,i->j', dirs, xhat) # (n,)
                     memmap[1,i:i+n] = np.einsum('ij,i->j', dirs, yhat) # (n,)
                     memmap[2,i:i+n] = np.einsum('ij,i->j', dirs, zhat) # (n,)
@@ -170,8 +325,8 @@ class Axis:
                     if pbar: bar.update(1)
                 if pbar: bar.close()
             else:
-                # interpolate
-                M = int(1+np.ceil((N*dt/tstep_min)))
+                # use interpolation
+                M = int(1+np.ceil((deltat/tstep_min)))
                 if M>buffersize:
                     raise Exception("ERROR: interpolation beyond buffersize is not supported")
                 else:
@@ -179,7 +334,7 @@ class Axis:
                     tguess = (1./49.)*M # guess how long to compute interpolation points
                     if tguess>5.:
                         print("Computing "+str(M)+" interpolation points. Should take less than "+str(tguess)+" s")
-                    dirs = self._time_series(tstart, M, tstep_min) # (3, M)
+                    dirs = self._time_series(epoch, M, tstep_min) # (3, M)
                     x = np.einsum('ij,i->j', dirs, xhat) # (M,)
                     y = np.einsum('ij,i->j', dirs, yhat) # (M,)
                     z = np.einsum('ij,i->j', dirs, zhat) # (M,)
@@ -193,16 +348,17 @@ class Axis:
                     if pbar: bar=tqdm(total=int(np.ceil(N/buffersize)))
                     while i<N:
                         n = min(buffersize, N-i)
-                        t = np.arange(i,i+n)*dt.to_value(u.s) # (N,)
-                        memmap[0,i:i+n] = interp.splev(t, x_tck) # (N,)
-                        memmap[1,i:i+n] = interp.splev(t, y_tck) # (N,)
-                        memmap[2,i:i+n] = interp.splev(t, z_tck) # (N,)
+                        if dt is None:
+                            t_eval = epoch+t[i:i+n]
+                        else:
+                            t_eval = np.arange(i,i+n)*dt.to_value(u.s) # (N,)
+                        memmap[0,i:i+n] = interp.splev(t_eval, x_tck) # (N,)
+                        memmap[1,i:i+n] = interp.splev(t_eval, y_tck) # (N,)
+                        memmap[2,i:i+n] = interp.splev(t_eval, z_tck) # (N,)
                         i += n
                         if pbar: bar.update(1)
                     if pbar: bar.close()
             del memmap
-        if fname=='components.dat':
-            print("WARNING: Reading default memmap file components.dat")
         output = np.memmap(fname, dtype=float, mode='r', shape=(3,N))
         return output
     
