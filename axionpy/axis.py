@@ -319,7 +319,7 @@ class Axis:
             z_tck = interp.splrep(tstepped, z)
 
             if dt is None:
-                t_eval = (epoch+t).to_value(u.s)
+                t_eval = (t-np.amin(t)).to_value(u.s)
             else:
                 t_eval = np.arange(N)*dt.to_value(u.s) # (N,)
             output[0,:] = interp.splev(t_eval, x_tck) # (N,)
