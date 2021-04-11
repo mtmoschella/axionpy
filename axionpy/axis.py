@@ -38,7 +38,7 @@ def _unit(arr):
     Renormalize such that array can be interpreted 
     as an (n2,...,nN) array of n1-dimensional unit vectors
     """
-    return arr/np.sqrt(np.sum(arr**2, axis=axis))
+    return arr/np.sqrt(np.sum(arr**2, axis=0))
 
 # Earth-based coordinate basis
 _oEarth = coord.EarthLocation(x=0.*u.m, y=0.*u.m, z=0.*u.m)
