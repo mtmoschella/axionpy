@@ -287,9 +287,11 @@ class Axis:
         if dt is None:
             # full time series specified
             deltat = np.amax(t)-np.amin(t)
+            tstart = epoch + np.amin(t)
         else:
             # N, dt specified
             deltat = N*dt
+            tstart = epoch
         use_interp = N*tstep_min > deltat
             
         if not use_interp:
@@ -306,7 +308,7 @@ class Axis:
             # use interpolation
             M = int(1+np.ceil((deltat/tstep_min)))
             
-            dirs = self._time_series(epoch, M, tstep_min) # (3, M)
+            dirs = self._time_series(tstart, M, tstep_min) # (3, M)
             x = np.einsum('ij,i->j', dirs, xhat) # (M,)
             y = np.einsum('ij,i->j', dirs, yhat) # (M,)
             z = np.einsum('ij,i->j', dirs, zhat) # (M,)
@@ -317,7 +319,7 @@ class Axis:
             z_tck = interp.splrep(tstepped, z)
 
             if dt is None:
-                t_eval = epoch+t
+                t_eval = (epoch+t).to_value(u.s)
             else:
                 t_eval = np.arange(N)*dt.to_value(u.s) # (N,)
             output[0,:] = interp.splev(t_eval, x_tck) # (N,)
