@@ -123,14 +123,45 @@ class Axis:
     """
     def __init__(self, lat, lon, theta, phi):
         """
-        lat, lon: latitude and longitude of the location of the axis on the Earth
-        theta: declination of the axis (polar angle measured from azimuth)
-        phi: orientation of the axis (azimuthal angle measured CCW from East)
+        lat : float or astropy.Quantity
+              Latitude of the location of the axis on the Earth.
+              If a float, then the angle is interpreted in radians.
+              Can be an astropy.Quantity of angle.
+
+        lon : float or astropy.Quantity
+              Longitude of the location of the axis on the Earth.
+              If a float, then the angle is interpreted in radians.
+              Can be an astropy.Quantity of angle.
+
+        theta : float or astropy.Quantity
+                Declination of the axis, polar angle measured from local azimuth.
+                If a float, then the angle is interpreted in radians.
+                Can be an astropy.Quantity of angle.
+
+        phi : float or astropy.Quantity
+              Azimuthal angle of the axis measured CCW from East.
+              If a float, then the angle is interpreted in radians.
+              Can be an astropy.Quantity of angle.
         """
-        self.lat = lat
-        self.lon = lon
-        self.theta = theta
-        self.phi = phi
+        if _is_quantity(lat, 'angle'):
+            self.lat = lat.to_value(u.rad)
+        else:
+            self.lat = lat
+
+        if _is_quantity(lon, 'angle'):
+            self.lon = lon.to_value(u.rad)
+        else:
+            self.lon = lon
+
+        if _is_quantity(theta, 'angle'):
+            self.theta = theta.to_value(u.rad)
+        else:
+            self.theta = theta
+
+        if _is_quantity(phi, 'angle'):
+            self.phi = phi.to_value(u.rad)
+        else:
+            self.phi = phi
 
     def _dir(self, t):
         """
