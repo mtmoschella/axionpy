@@ -33,13 +33,12 @@ def _is_quantity(q, t=None):
 def _unit(arr):
     """
     arr: numpy ndarray
-    axis: axis along which to renormalize
     
     Given ndarray of shape (n1, ..., nN)
     Renormalize such that array can be interpreted 
     as an (n2,...,nN) array of n1-dimensional unit vectors
     """
-    return arr/np.sqrt(np.sum(arr**2, axis=0))
+    return arr/np.sqrt(np.sum(arr**2, axis=axis))
 
 # Earth-based coordinate basis
 _oEarth = coord.EarthLocation(x=0.*u.m, y=0.*u.m, z=0.*u.m)
@@ -182,17 +181,13 @@ class Axis:
                Epoch specifying the starting time. Defaults to J2000. 
                All times are measured from this epoch.
 
-        xhat : (3,) array-like
-               x basis vector in galactic {u,v,w} coordinates.
-               Defaults to _x.
-
-        yhat : (3,) array-like
-               y basis vector in galactic {u,v,w} coordinates.
-               Defaults to _y.
-
-        zhat : (3,) array-like
-               z basis vector in galactic {u,v,w} coordinates. 
-               Defaults to _z.
+        basis : str in {'xyz', 'uvw'} or (3,3) array-like
+                The set of basis vectors to project the axis onto.
+                Defaults to 'uvw'.
+                If 'uvw' uses Galactic coordinate basis
+                If 'xyz' uses xyz basis where z is parallel to vsun
+                If array-like uses the basis where basis[:,i] is the ith basis vector.
+                Basis vectors do no need to be normalized.
 
         tstep_min : astropy.Quantity
                     Minimum time step for using full astropy EarthLocation evaluation. 
@@ -231,26 +226,22 @@ class Axis:
         else:
              epoch = Time("J2000.0")
 
-        if 'xhat' in kwargs:
-            xhat = np.asarray(kwargs['xhat'])
-            if xhat.shape!=(3,):
-                raise Exception("ERROR: xhat must have shape (3,)")
+        if 'basis' in kwargs:
+            if kwargs['basis']=='uvw':
+                xhat, yhat, zhat = _u, _v, _w
+            elif kwargs['basis']=='xyz':
+                xhat, yhat, zhat = _x, _y, _z
+            elif isinstance(kwargs['basis'],str):
+                raise Exception("ERROR: If basis is a str, it must be either 'uvw' or 'xyz'")
+            else:
+                basis = np.asarray(kwargs['basis'])
+                if basis.shape!=(3,3):
+                    raise Exception("ERROR: basis must be a (3,3) array-like")
+                basis = _unit(basis) # normalize
+                xhat, yhat, zhat = np.transpose(basis)
         else:
-            xhat = _x
-
-        if 'yhat' in kwargs:
-            yhat = np.asarray(kwargs['yhat'])
-            if yhat.shape!=(3,):
-                raise Exception("ERROR: yhat must have shape (3,)")
-        else:
-            yhat = _y
-
-        if 'zhat' in kwargs:
-            zhat = np.asarray(kwargs['zhat'])
-            if zhat.shape!=(3,):
-                raise Exception("ERROR: zhat must have shape (3,)")            
-        else:
-            zhat = _zhat
+            # use uvw basis as default
+            xhat, yhat, zhat  = _u, _v, _w
 
         if 'tstep_min' in kwargs:
             tstep_min = kwargs['tstep_min']
