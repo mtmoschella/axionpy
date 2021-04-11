@@ -244,7 +244,7 @@ class Axis:
             t = kwargs["t"]
             N = len(t)
             dt = None
-            if not _isquantity(t, "time"):
+            if not _is_quantity(t, "time"):
                 raise Exception("ERROR: t is required to be an astropy.Quantity of time")
         else:
             raise Exception("ERROR: Invalid kwargs. Must specify either N and dt or t.")
