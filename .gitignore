@@ -2,5 +2,7 @@
 !.gitignore
 !axionpy/
 !axionpy/*.py
+!axionpy/analysis/
+!axionpy/analysis/*.py
 !tests/
 !tests/*.py
