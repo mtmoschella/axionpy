@@ -1,6 +1,9 @@
 """
 This module for the full time domain analysis.
 """
+import numpy as np
+import astropy.units as u
+
 def compute_coefficients(m, t, y):
     """
     Compute the A and B coefficients for the given time series of data.
@@ -35,7 +38,7 @@ def compute_coefficients(m, t, y):
     yval = y.to_value(unit)
     mt = (m*t).to_value(u.dimensionless_unscaled) # radians
     
-    M = np.transpose([ np.cos(mat), np.sin(mat) ]) # (N, 2)
+    M = np.transpose([ np.cos(mt), np.sin(mt) ]) # (N, 2)
     coeffs, resid, rank, s = np.linalg.lstsq(M, yval, rcond=None)
     A, B = coeffs
     return A*unit, B*unit
