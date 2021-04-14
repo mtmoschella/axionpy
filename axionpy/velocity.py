@@ -13,3 +13,4 @@ vcirc = 220.
 vlsr = np.array([0., vcirc, 0.]) # km/s
 vpec = np.array([11., 12., 7.])
 vsun = vlsr + vpec
+

@@ -2,7 +2,7 @@ import numpy as np
 
 class CovMatrix:
     """
-    Efficient matrix computation using Eigenvalue/Eigenvector diagonalization
+    Efficient matrix computation using eigenvalue/eigenvector diagonalization
     """
     def __init__(self, mat):
         """
