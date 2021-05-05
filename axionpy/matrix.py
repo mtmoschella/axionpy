@@ -13,11 +13,21 @@ class CovMatrix:
         self.U = U
         self.Uinv = np.transpose(U)
 
+        
+        # check if matrix is positive semi-definite
+        positive = np.all(self.L>=0.)
+        if not positive:
+            # repair if all negative eigenvalues are smaller than 1.e-10*largest_eigenvalue
+            if np.absolute(np.amin(self.L))<1.e-10*np.amax(self.L):
+                self.L[self.L<0.]= 0.
+            else:
+                raise Exception("ERROR: cov matrix not positive semi-definite")
+
     def diag(self, g, sigma_noise):
         """
         g: coupling (in T not astropy)
         sigma_noise: noise amplitude (in T not astropy)
-        """        
+        """
         return self.L*g**2 + sigma_noise**2
         
     def __call__(self, g, sigma_noise):

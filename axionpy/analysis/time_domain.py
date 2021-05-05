@@ -3,6 +3,12 @@ This module for the full time domain analysis.
 """
 import numpy as np
 import astropy.units as u
+import natural_units as nat
+import scipy.optimize as opt
+from scipy import stats
+from ..maxwell import cov
+
+_rhodm = 0.3*u.GeV/u.cm**3
 
 def compute_coefficients(m, t, y):
     """
@@ -43,39 +49,98 @@ def compute_coefficients(m, t, y):
     A, B = coeffs
     return A*unit, B*unit
         
-def loglikelihood(g, m, t, x, xerr):
+def loglikelihood(x, g, s, c):
     """
     Computes the loglikelihood of the data given model parameters.
     
     g: axion coupling [astropy.Quantity in equivalent units to GeV^-1]
-    m: axion mass [astropy.Quantity in equivalent units to Angular Frequency]
-    t: time series [(N,) astropy.Quantity in units of Time]
-    x: data [ (2, N) astropy.Quantity in units of GeV ]
-    xerr: data uncertainty [ scalar or (2,N) array astropy.Quantity in units of GeV]
+    s: data uncertainty [astropy.Quantity in GeV]
+    x: data [ (2N,) astropy.Quantity in GeV]
+    c: CovMatrix object containing the covariance matrix
 
     Returns a float
     """
-    raise Exception("ERROR: NOT IMPLEMENTED")
+    geff = nat.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
+    chi2 = c.chi2(geff.to_value(u.GeV), s.to_value(u.GeV), x.to_value(u.GeV))
+    logdet = c.logdet(geff.to_value(u.GeV), s.to_value(u.GeV))
+    return -0.5*(chi2 + logdet)
 
-def maximize_likelihood(m, t, x, xerr=None, g=None):
+def maximize_likelihood(A, B, c, g_scale=1.0e-10*u.GeV**-1, s_scale=1.e-34*u.GeV):
     """
-    m: axion mass [astropy.Quantity in equivalent units to Angular Frequency]
-    t: time series [(N,) astropy.Quantity in units of Time]
-    x: data [ (2, N) astropy.Quantity in units of GeV ]
-    xerr: uncertainty [ optional scalar or (2,N) array astropy.Quantity in units of GeV]
-    g: coupling [opional fixed value of coupling, for constrained optimization]
+    A: (N,) astropy.Quantity in GeV
+    B: (N,) astropy.Quantity in GeV
+    c: CovMatrix object representing NxN matrix
+    g_scale: rough scale for g in astropy GeV**-1
+    s_scale: rough scale for s in astropy GeV
+    """
+    x = np.concatenate((A,B))
+    
+    def f_to_minimize(p):
+        log10g, log10s = p
+        ll = loglikelihood(x, 10.**log10g*u.GeV**-1, 10.**log10s*u.GeV, c)
+        if np.isfinite(ll):
+            return -1.*ll
+        raise Exception("ERROR: non-finite ll")
 
-    Returns
-    """
-    raise Exception("ERROR: NOT IMPLEMENTED")
+    p0 = np.array([ np.log10(g_scale.to_value(u.GeV**-1)), np.log10(s_scale.to_value(u.GeV)) ])
+    res = opt.minimize(f_to_minimize, p0, bounds=[[None, 0.0], [None, 0.0]])
+    log10g, log10s = res.x
+    maxll = -1.*res.fun
+    return 10.**log10g*u.GeV**-1, 10.**log10s*u.GeV, maxll
 
-def frequentist_upper_limit(m, t, x, xerr=None, confidence=0.95):
+def profile_likelihood(A, B, c, g, s_scale=1.e-34*u.GeV):
     """
-    m: axion mass [astropy.Quantity in equivalent units to Angular Frequency]
-    t: time series [(N,) astropy.Quantity in units of Time]
-    x: data [ (2, N) astropy.Quantity in units of GeV ]
-    xerr: uncertainty [ optional scalar or (2,N) array astropy.Quantity in units of GeV]
-    g: coupling [opional fixed value of coupling, for constrained optimization]
+    A: (N,) astropy.Quantity in GeV
+    B: (N,) astropy.Quantity in GeV
+    c: CovMatrix object representing NxN matrix
+    g: fixed value of coupling, astropy GeV^-1
+    p0: initial guess for log10s
     """
-    raise Exception("ERROR: NOT IMPLEMENTED")
+    x = np.concatenate((A,B))
 
+    def f_to_minimize(p):
+        log10s = p
+        ll = loglikelihood(x, g, 10.**log10s*u.GeV, c)
+        if np.isfinite(ll):
+            return -1.*ll
+        raise Exception("ERROR: non-finite ll")
+
+    p0 = np.log10(s_scale.to_value(u.GeV))
+    res = opt.minimize(f_to_minimize, p0)
+    log10s = res.x
+    maxll = -1.*res.fun
+    return 10.**log10s*u.GeV, maxll
+
+def frequentist_upper_limit(A, B, c, confidence=0.95, gmax=None, smax=None, llmax=None, g_scale=1.e-10*u.GeV**-1, s_scale=1.e-34*u.GeV):
+    """
+    """
+    x = np.concatenate((A,B))
+
+    if gmax is None or smax is None:
+        gmax, smax, llmax = maximize_likelihood(A, B, c, g_scale=g_scale, s_scale=s_scale)
+    elif llmax is None:
+        llmax = loglikelihood(x, gmax, smax, c)
+
+    ts_critical = stats.chi2.ppf(1.-2.*(1.-confidence), df=1)        
+    ll_critical = llmax - 0.5*ts_critical
+
+    def f_root(x):
+        log10g = x
+        s, ll = profile_likelihood(A, B, c, 10.**log10g*u.GeV**-1, s_scale)
+        return ll-ll_critical
+
+    log10gmax = np.log10(gmax.to_value(u.GeV**-1))
+
+    try:
+        res = opt.root_scalar(f_root, bracket=[log10gmax, -6.])
+    except:
+        print("WARNING: received error in Root Finding")
+        raise 
+        return 0.0*u.GeV**-1
+
+    log10glim = res.root
+    fmin = np.absolute(f_root(log10glim))
+    if fmin>0.1:
+        print("WARNING: Root finding may have failed.")
+    return 10.**log10glim*u.GeV**-1
+        

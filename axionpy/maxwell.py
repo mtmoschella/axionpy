@@ -5,10 +5,13 @@ This module for implementing a Maxwell-Boltzmann distribution
 import natural_units as nat
 import astropy.units as u
 import astropy.constants as const
+from . import axis as axs
+from . import matrix
+import numpy as np
 
 # default distribution parameters
-_sigma = nat.toNaturalUnits(220.0*u.km/u.s, value=True)
-_vo = nat.toNaturalUnits(234.0*u.km/u.s, value=True)
+_sigma = nat.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
+_vo = nat.toNaturalUnits(234.0*u.km/u.s).to_value(u.dimensionless_unscaled)
 
 def _A_par(x, **kwargs):
     """
@@ -85,42 +88,86 @@ def _Psi_perp(x, **kwargs):
 
 def correlator(mode, m, t1, t2, **kwargs):
     """
-    Computes the specified two-point correlation function.
+    Computes the specified two-point correlation function. With rhodm=1.
 
     mode : str in {'AxAx', 'AxBx',
                    'AyAy', 'AyBy',
-                   'AzAz', 'AzBz',
-                   'AA', 'AB'}
+                   'AzAz', 'AzBz'}
            Specifies which correlators to compute.
            
     m : astropy.Quantity
         The axion mass, must have units equivalent to frequency
 
-    t1 : array-like
+    t1 : astropy.Quantity array-like
          The times at which to evaluate the first operator.
          Must be same shape as t2.
 
-    t2 : array-like
+    t2 : astropy.Quantity array-like
          The times at which to evaluate the second operator.
          Must be same shape as t1.
     """
 
+    if 'sigma' in kwargs:
+        sigma = kwargs['sigma']
+    else:
+        sigma = _sigma
+        
+    x = (m*(t1-t2)*sigma**2).to_value(u.dimensionless_unscaled)
+    
     if mode=='AxAx':
-        pass
+        return _A_perp(x, **kwargs)*np.cos(_Psi_perp(x,**kwargs))
     elif mode=='AxBx':
-        pass
+        return _A_perp(x, **kwargs)*np.sin(_Psi_perp(x,**kwargs))
     elif mode=='AyAy':
-        pass
+        return _A_perp(x, **kwargs)*np.cos(_Psi_perp(x,**kwargs))
     elif mode=='AyBy':
-        pass
+        return _A_perp(x, **kwargs)*np.sin(_Psi_perp(x,**kwargs))
     elif mode=='AzAz':
-        pass
+        return _A_par(x, **kwargs)*np.cos(_Psi_par(x,**kwargs))
     elif mode=='AzBz':
-        pass
-    elif mode=='AA':
-        pass
-    elif mode=='BB':
-        pass
+        return _A_par(x, **kwargs)*np.sin(_Psi_par(x,**kwargs))
     else:
         raise Exception("ERROR: unrecognized mode "+str(mode)+" for correlator")
     
+def cov(m, t, **kwargs):
+    """
+    m : astropy.Quantity
+    t : (N,) astropy.Quantity
+    
+    components : (optional) (3,N) array of axis components
+    axis : (optional)
+    lat, lon, theta, phi : (optional)
+
+    kwargs : passed to Axis.components if components is not specified
+    
+    Return CovMatrix object
+    """
+    if 'components' in kwargs:
+        components = kwargs['components']
+    elif 'axis' in kwargs:
+        axis = kwargs['axis']
+        components = axis.components(t=t, basis='xyz', **kwargs)
+    elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
+        axis = axs.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
+        components = axis.components(t=t, basis='xyz', **kwargs)
+    else:
+        raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+    
+    t1, t2 = np.meshgrid(t, t, indexing='ij')
+    mx_1, mx_2 = np.meshgrid(components[0], components[0], indexing='ij')
+    my_1, my_2 = np.meshgrid(components[1], components[1], indexing='ij')
+    mz_1, mz_2 = np.meshgrid(components[2], components[2], indexing='ij')
+
+    AxAx = correlator('AxAx', m, t1, t2, **kwargs)
+    AxBx = correlator('AxBx', m, t1, t2, **kwargs)
+    AyAy = correlator('AyAy', m, t1, t2, **kwargs)
+    AyBy = correlator('AyBy', m, t1, t2, **kwargs)
+    AzAz = correlator('AzAz', m, t1, t2, **kwargs)
+    AzBz = correlator('AzBz', m, t1, t2, **kwargs)
+
+    AA = mx_1*mx_2*AxAx + my_1*my_2*AyAy + mz_1*mz_2*AzAz
+    AB = mx_1*mx_2*AxBx + my_1*my_2*AyBy + mz_1*mz_2*AzBz
+
+    C = np.block([[AA, AB], [-AB, AA]])
+
+    return matrix.CovMatrix(C)
