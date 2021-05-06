@@ -1,5 +1,17 @@
 """
-This module for the full time domain analysis.
+This module for the "full" time domain analysis.
+
+This analysis procedure works by splitting the time series into bins
+that are much smaller than the axion coherence time and much smaller than 1 day.
+Therefore, the axion oscillations can be treated as coherent and having constant amplitude
+over the course of each bin.
+The amplitude and phase of the coherent axion oscillations in each bin is obtained via 
+ordinary least-squares fitting and then the time series of these coefficients is input into 
+a Gaussian likelihood with non-trivial covariance matrix computed by the cov() function.
+
+This procedure is only valid when the axion mass satisfies m >~ 0.1*2*pi/day, 
+otherwise the axion does not oscillate rapidly enough to uniquely identify the
+amplitude and phase of oscilliations in each time bin.
 """
 import numpy as np
 import astropy.units as u
@@ -26,7 +38,7 @@ def compute_coefficients(m, t, y):
         The time series.
 
     y : (N,) astropy.Quantity
-        The observed data.
+        The observed data. Can have arbitrary astropy units.
 
     Returns
     ---------------
@@ -37,7 +49,7 @@ def compute_coefficients(m, t, y):
     """
     # check if valid time series
     T = np.amax(t)-np.amin(t)
-    if T > 1.e5/m or T>0.1*u.day:
+    if T>1.e5/m or T>0.1*u.day:
         print("WARNING: compute_coefficients only makes physical sense on short timescales.")
 
     unit = y.unit
@@ -52,13 +64,26 @@ def compute_coefficients(m, t, y):
 def loglikelihood(x, g, s, c):
     """
     Computes the loglikelihood of the data given model parameters.
-    
-    g: axion coupling [astropy.Quantity in equivalent units to GeV^-1]
-    s: data uncertainty [astropy.Quantity in GeV]
-    x: data [ (2N,) astropy.Quantity in GeV]
-    c: CovMatrix object containing the covariance matrix
 
-    Returns a float
+    Parameters
+    ----------------
+    x : (2N,) astropy.Quantity (GeV)
+        The A,B fit coefficients in each bin of the time series.
+        Stacked such that x  = (A1, ..., AN, B1, ..., BN)
+
+    g : astropy.Quantity (GeV^-1 or natural equivalent)
+        The axion coupling constant.
+
+    s : astropy.Quantity (GeV)
+        The constant uncertainty on x, the binned coefficients.
+    
+    c : CovMatrix
+        Object representing the (2N,2N) covariance matrix
+
+    Returns
+    ------------------
+    ll : float
+         The log-likelihood evaluated with the given data and model parameters.
     """
     geff = nat.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
     chi2 = c.chi2(geff.to_value(u.GeV), s.to_value(u.GeV), x.to_value(u.GeV))
@@ -67,11 +92,36 @@ def loglikelihood(x, g, s, c):
 
 def maximize_likelihood(A, B, c, g_scale=1.0e-10*u.GeV**-1, s_scale=1.e-34*u.GeV):
     """
-    A: (N,) astropy.Quantity in GeV
-    B: (N,) astropy.Quantity in GeV
-    c: CovMatrix object representing NxN matrix
-    g_scale: rough scale for g in astropy GeV**-1
-    s_scale: rough scale for s in astropy GeV
+    Maximizes the likelihood with respect to the axion coupling g and the noise parameter s.
+
+    Parameters:
+    ------------------------
+    A,B : (N,) astropy.Quantity (GeV)
+          The fit coefficients in each bin of the time series.
+
+    c : CovMatrix
+        Object representing the (2N, 2N) covariance matrix
+
+    g_scale : (optional) astropy.Quantity (GeV^-1 or natural equivalent)
+              Rough scale/estimate for the coupling g.
+              Used for initial conditions in the optimization routine.
+              Defaults to 1.e-10*u.GeV**-1
+
+    s_scale: (optional) astropy.Quantity (GeV)
+             Rough scale/estimate for the noise parameter s.
+             Used for initial conditions in the optimization routine.             
+             Defaults to 1.e-34*u.GeV
+
+    Returns:
+    ------------------------
+    g : astropy.Quantity (GeV^-1)
+        The best-fit coupling constant.
+
+    s : astropy.Quantity (GeV)
+        The best-fit noise parameter.
+
+    maxll : float
+            The value of maximum value of the loglikelihood function.
     """
     x = np.concatenate((A,B))
     
@@ -90,11 +140,31 @@ def maximize_likelihood(A, B, c, g_scale=1.0e-10*u.GeV**-1, s_scale=1.e-34*u.GeV
 
 def profile_likelihood(A, B, c, g, s_scale=1.e-34*u.GeV):
     """
-    A: (N,) astropy.Quantity in GeV
-    B: (N,) astropy.Quantity in GeV
-    c: CovMatrix object representing NxN matrix
-    g: fixed value of coupling, astropy GeV^-1
-    p0: initial guess for log10s
+    Maximizes the likelihood with respect to the noise parameter s for a given value of axion coupling g.
+
+    Parameters:
+    ------------------
+    A,B : (N,) astropy.Quantity (GeV)
+          The fit coefficients in each bin of the time series.
+
+    c : CovMatrix
+        Object representing the (2N, 2N) covariance matrix
+
+    g : astropy.Quantity (GeV^-1)
+        The fixed value of the axion coupling.
+
+    s_scale: (optional) astropy.Quantity (GeV)
+             Rough scale/estimate for the noise parameter s.
+             Used for initial conditions in the optimization routine.             
+             Defaults to 1.e-34*u.GeV
+
+    Returns:
+    ------------------------
+    s : astropy.Quantity (GeV)
+        The best-fit noise parameter.
+
+    maxll : float
+            The value of maximum value of the loglikelihood function.
     """
     x = np.concatenate((A,B))
 
@@ -113,6 +183,53 @@ def profile_likelihood(A, B, c, g, s_scale=1.e-34*u.GeV):
 
 def frequentist_upper_limit(A, B, c, confidence=0.95, gmax=None, smax=None, llmax=None, g_scale=1.e-10*u.GeV**-1, s_scale=1.e-34*u.GeV):
     """
+    Computes the axion coupling constant g that is the frequentist upper limit 
+    at the specified constant, that is, the value of g such that the profile likelihood ll 
+    satisfies chi2 = 2*(llmax-ll), 
+    where chi2 is the value of the chi-squared distribution with one degree of freedom 
+    such that cdf(chi2) = 1 - 2*(1-confidence). 
+
+    Note that the reason this does not satisfy cdf(chi2)=confidence 
+    is because Wilks' theorem guarantees that the test statistic chi2 
+    is a half-chi-squared distributed random variable under the null hypothesis, 
+    rather than a full-chi-squared distriubed random variable.
+
+    Parameters:
+    ------------------------
+    A,B : (N,) astropy.Quantity (GeV)
+          The fit coefficients in each bin of the time series.
+
+    c : CovMatrix
+        Object representing the (2N, 2N) covariance matrix
+    
+    confidence : (optional) float
+                 The requested confidence for the upper limit. 
+                 Must satify 0.<confidence<1.
+                 Defaults to 0.95
+
+    gmax : (optional) astropy.Quantity (GeV^-1)
+           The best-fit coupling constant. 
+           If not specified then the maximize_likelihood function is called.
+    
+    smax : (optional) astropy.Quantity (GeV)
+           The best-fit noise parameter.
+           If not specified then the maximize_likelihood function is called.
+    
+    llmax : (optional) float
+            The maximum value of the loglikelihood function.
+            If not specified, this is computed, either using the specified gmax and smax
+            or from the call to maximize_likelihood.
+
+    g_scale : (optional) astropy.Quantity (GeV^-1 or natural equivalent)
+              Rough scale/estimate for the coupling g.
+              Used for initial conditions in the optimization routine.
+              Defaults to 1.e-10*u.GeV**-1
+
+    s_scale: (optional) astropy.Quantity (GeV)
+             Rough scale/estimate for the noise parameter s.
+             Used for initial conditions in the optimization routines.             
+             Defaults to 1.e-34*u.GeV
+
     """
     x = np.concatenate((A,B))
 
@@ -131,12 +248,7 @@ def frequentist_upper_limit(A, B, c, confidence=0.95, gmax=None, smax=None, llma
 
     log10gmax = np.log10(gmax.to_value(u.GeV**-1))
 
-    try:
-        res = opt.root_scalar(f_root, bracket=[log10gmax, -6.])
-    except:
-        print("WARNING: received error in Root Finding")
-        raise 
-        return 0.0*u.GeV**-1
+    res = opt.root_scalar(f_root, bracket=[log10gmax, -6.])
 
     log10glim = res.root
     fmin = np.absolute(f_root(log10glim))
