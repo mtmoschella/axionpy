@@ -1,2 +1,2 @@
-__all__ = ['analysis', 'axis', 'velocity']
+__all__ = ['analysis', 'axis', 'constants', 'matrix', 'maxwell', 'velocity']
 from . import *
