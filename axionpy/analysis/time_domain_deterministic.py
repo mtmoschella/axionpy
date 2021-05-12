@@ -1,5 +1,9 @@
 """
 This module for the "deterministic" time domain analysis.
+
+This analysis is never fully correct, but only makes sense
+when the coherence time is much longer than the experimental integration time,
+so that incoherent fluctuations can be ignored.
 """
 
 import numpy as np
