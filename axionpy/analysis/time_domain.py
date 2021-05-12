@@ -20,7 +20,7 @@ import scipy.optimize as opt
 from scipy import stats
 import ..maxwell as maxwell
 import ..axis as axs
-import ..constants as constants
+from ..constants import _rhodm
 
 def cov(m, t, **kwargs):
     """
@@ -128,7 +128,7 @@ def loglikelihood(x, g, s, c):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    geff = nat.convert(np.sqrt(constants.rhodm)*g, u.GeV) # rescale for covariance matrix
+    geff = nat.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
     chi2 = c.chi2(geff.to_value(u.GeV), s.to_value(u.GeV), x.to_value(u.GeV))
     logdet = c.logdet(geff.to_value(u.GeV), s.to_value(u.GeV))
     return -0.5*(chi2 + logdet)
@@ -273,6 +273,10 @@ def frequentist_upper_limit(A, B, c, confidence=0.95, gmax=None, smax=None, llma
              Used for initial conditions in the optimization routines.             
              Defaults to 1.e-34*u.GeV
 
+    Returns
+    --------------
+    glim : astropy.Quantity (GeV^-1)
+           The upper limit on the coupling constant for the model at the specified confidence
     """
     x = np.concatenate((A,B))
 
