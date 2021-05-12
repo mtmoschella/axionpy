@@ -13,7 +13,7 @@ This procedure is only valid when the axion mass satisfies m >~ 0.1*2*pi/day,
 otherwise the axion does not oscillate rapidly enough to uniquely identify the
 amplitude and phase of oscilliations in each time bin.
 """
-import numpy as np
+import numpy as np 
 import astropy.units as u
 import natural_units as nat
 import scipy.optimize as opt
@@ -21,6 +21,7 @@ from scipy import stats
 import ..maxwell as maxwell
 import ..axis as axs
 from ..constants import _rhodm
+import ..matrix as matrix
 
 def cov(m, t, **kwargs):
     """
