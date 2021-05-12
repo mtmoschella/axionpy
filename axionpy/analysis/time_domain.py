@@ -18,9 +18,53 @@ import astropy.units as u
 import natural_units as nat
 import scipy.optimize as opt
 from scipy import stats
-from ..maxwell import cov
+import ..maxwell as maxwell
+import ..axis as axs
 
 _rhodm = 0.3*u.GeV/u.cm**3
+
+def cov(m, t, **kwargs):
+    """
+    m : astropy.Quantity
+    t : (N,) astropy.Quantity
+    
+    components : (optional) (3,N) array of axis components
+    axis : (optional)
+    lat, lon, theta, phi : (optional)
+
+    kwargs : passed to Axis.components if components is not specified
+    
+    Return CovMatrix object
+    """
+    if 'components' in kwargs:
+        components = kwargs['components']
+    elif 'axis' in kwargs:
+        axis = kwargs['axis']
+        components = axis.components(t=t, basis='xyz', **kwargs)
+    elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
+        axis = axs.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
+        components = axis.components(t=t, basis='xyz', **kwargs)
+    else:
+        raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+    
+    t1, t2 = np.meshgrid(t, t, indexing='ij')
+    mx_1, mx_2 = np.meshgrid(components[0], components[0], indexing='ij')
+    my_1, my_2 = np.meshgrid(components[1], components[1], indexing='ij')
+    mz_1, mz_2 = np.meshgrid(components[2], components[2], indexing='ij')
+
+    AxAx = maxwell.correlator('AxAx', m, t1, t2, **kwargs)
+    AxBx = maxwell.correlator('AxBx', m, t1, t2, **kwargs)
+    AyAy = maxwell.correlator('AyAy', m, t1, t2, **kwargs)
+    AyBy = maxwell.correlator('AyBy', m, t1, t2, **kwargs)
+    AzAz = maxwell.correlator('AzAz', m, t1, t2, **kwargs)
+    AzBz = maxwell.correlator('AzBz', m, t1, t2, **kwargs)
+
+    AA = mx_1*mx_2*AxAx + my_1*my_2*AyAy + mz_1*mz_2*AzAz
+    AB = mx_1*mx_2*AxBx + my_1*my_2*AyBy + mz_1*mz_2*AzBz
+
+    C = np.block([[AA, AB], [-AB, AA]])
+
+    return matrix.CovMatrix(C)
 
 def compute_coefficients(m, t, y):
     """
@@ -44,7 +88,7 @@ def compute_coefficients(m, t, y):
     ---------------
     A, B : astropy.Quantity
            The A and B coefficients such that 
-           A*cos(m*t) + B*sin(m*t) is the least-squares solution for the data y
+           y = A*cos(m*t) + B*sin(m*t) is the least-squares solution
            Output is an astropy.Quantity with the same units as y
     """
     # check if valid time series
