@@ -20,8 +20,7 @@ import scipy.optimize as opt
 from scipy import stats
 import ..maxwell as maxwell
 import ..axis as axs
-
-_rhodm = 0.3*u.GeV/u.cm**3
+import ..constants as constants
 
 def cov(m, t, **kwargs):
     """
@@ -129,7 +128,7 @@ def loglikelihood(x, g, s, c):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    geff = nat.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
+    geff = nat.convert(np.sqrt(constants.rhodm)*g, u.GeV) # rescale for covariance matrix
     chi2 = c.chi2(geff.to_value(u.GeV), s.to_value(u.GeV), x.to_value(u.GeV))
     logdet = c.logdet(geff.to_value(u.GeV), s.to_value(u.GeV))
     return -0.5*(chi2 + logdet)
