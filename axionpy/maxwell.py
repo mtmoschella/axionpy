@@ -4,8 +4,7 @@ This module for implementing a Maxwell-Boltzmann distribution
 
 import natural_units as nat
 import astropy.units as u
-from . import axis as axs
-from . import matrix
+from axionpy import axis as axs
 import numpy as np
 
 # default distribution parameters

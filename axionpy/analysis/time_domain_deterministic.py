@@ -11,8 +11,8 @@ import astropy.units as u
 import natural_units as nat
 import scipy.optimize as opt
 import scipy.stats as stats
-from ..maxwell import _vo
-from ..constants import _rhodm
+from axionpy.maxwell import _vo
+from axionpy.constants import _rhodm
 
 def _g(a, b):
     """

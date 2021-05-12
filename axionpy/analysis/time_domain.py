@@ -18,10 +18,10 @@ import astropy.units as u
 import natural_units as nat
 import scipy.optimize as opt
 from scipy import stats
-import ..maxwell as maxwell
-import ..axis as axs
-from ..constants import _rhodm
-import ..matrix as matrix
+from axionpy import maxwell
+from axionpy import axis as axs
+from axionpy.constants import _rhodm
+from axionpy import matrix
 
 def cov(m, t, **kwargs):
     """
