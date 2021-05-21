@@ -2,7 +2,7 @@
 This module for generating mock data.
 """
 
-def signal(m, g, t, **kwargs):
+def signal(m, g, **kwargs):
     """
     Generates a random signal over the specified time series.
 
@@ -57,7 +57,23 @@ n
     signal : (N,) or (N, ntrials) astropy.Quantity (GeV)
              The gradient of the axion field over the specified time series.
     """
-    pass
+
+    # parse required kwargs
+    if "N" in kwargs and "dt" in kwargs:
+        N = int(kwargs["N"])
+        dt = kwargs["dt"]
+        if not _is_quantity(dt, "time"):
+            raise Exception("ERROR: dt is required to be an astropy.Quantity of time")
+    elif "t" in kwargs:
+        t = kwargs["t"]
+        N = len(t)
+        dt = None
+        if not _is_quantity(t, "time"):
+            raise Exception("ERROR: t is required to be an astropy.Quantity of time")
+    else:
+        raise Exception("ERROR: Invalid kwargs. Must specify either N and dt or t.")
+    
+    if fname in kwargs
 
 
 

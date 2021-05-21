@@ -2,14 +2,13 @@
 This module for implementing a Maxwell-Boltzmann distribution
 """
 
-import natural_units as nat
-import astropy.units as u
+from axionpy import units as u 
 from axionpy import axis as axs
 import numpy as np
 
 # default distribution parameters
-_sigma = nat.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
-_vo = nat.toNaturalUnits(234.0*u.km/u.s).to_value(u.dimensionless_unscaled)
+_sigma = u.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
+_vo = u.toNaturalUnits(234.0*u.km/u.s).to_value(u.dimensionless_unscaled)
 
 def _A_par(x, **kwargs):
     """

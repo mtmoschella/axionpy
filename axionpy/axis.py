@@ -1,7 +1,7 @@
 import numpy as np
 import astropy.coordinates as coord
 from astropy.time import Time
-import astropy.units as u
+from axionpy import units as u
 import matplotlib.pyplot as plt
 import scipy.interpolate as interp
 import util_toolkit as util

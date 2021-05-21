@@ -6,10 +6,9 @@ that the axion gradient is *always* in the direction of vsun
 and the axion "speed" is *always* vo.
 """
 import numpy as np 
-import astropy.units as u
-import natural_units as nat
 import scipy.optimize as opt
 from scipy import stats
+from axionpy import units as u
 import axionpy import maxwell
 import axionpy import axis as axs
 from axionpy.constants import _rhodm

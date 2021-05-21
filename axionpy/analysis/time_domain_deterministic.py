@@ -7,10 +7,9 @@ so that incoherent fluctuations can be ignored.
 """
 
 import numpy as np
-import astropy.units as u
-import natural_units as nat
 import scipy.optimize as opt
 import scipy.stats as stats
+from axionpy import units as u
 from axionpy.maxwell import _vo
 from axionpy.constants import _rhodm
 
@@ -28,7 +27,7 @@ def _g(a, b):
     g : astropy.Quantity (GeV^-1)
         The axion coupling constant
     """
-    return nat.convert(np.sqrt(a**2 + b**2)/(np.sqrt(_rhodm)*_vo), u.GeV**-1)
+    return u.convert(np.sqrt(a**2 + b**2)/(np.sqrt(_rhodm)*_vo), u.GeV**-1)
 
 def _p(a, b):
     """
@@ -63,7 +62,7 @@ def _a(g, p):
     a : astropy.Quantity (GeV)
         The axion cosine amplitude.
     """
-    return nat.convert(g*np.cos(p)*np.sqrt(_rhodm)*_vo, u.GeV)
+    return u.convert(g*np.cos(p)*np.sqrt(_rhodm)*_vo, u.GeV)
 
 def _b(g, p):
     """
@@ -82,7 +81,7 @@ def _b(g, p):
     b : astropy.Quantity (GeV)
         The axion sine amplitude.
     """
-    return nat.convert(g*np.sin(p)*np.sqrt(_rhodm)*_vo, u.GeV)
+    return u.convert(g*np.sin(p)*np.sqrt(_rhodm)*_vo, u.GeV)
 
 def loglikelihood(x, mt, mz, g, p, s):
     """
@@ -103,7 +102,7 @@ def loglikelihood(x, mt, mz, g, p, s):
          The deterministic analysis assumes that the axion field only
          has gradient in the z direction (parallel to vsun)
 
-    g : astropy.Quantity (GeV^-1 or natural equivalent)
+    g : astropy.Quantity (GeV^-1 or natxural equivalent)
         The axion coupling constant.
 
     p : float
@@ -214,7 +213,7 @@ def profile_likelihood(x, mt, mz, g, p0=1.):
             The value of maximum value of the loglikelihood function.
     """
 
-    amp = nat.convert(g*np.sqrt(_rhodm)*_vo, u.GeV, value=True) # precompute unit conversion for efficiency
+    amp = u.convert(g*np.sqrt(_rhodm)*_vo, u.GeV, value=True) # precompute unit conversion for efficiency
     def f_to_minimize(p):
         a = amp*np.cos(p)
         b = amp*np.sin(p)

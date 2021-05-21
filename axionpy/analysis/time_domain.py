@@ -14,10 +14,9 @@ otherwise the axion does not oscillate rapidly enough to uniquely identify the
 amplitude and phase of oscilliations in each time bin.
 """
 import numpy as np 
-import astropy.units as u
-import natural_units as nat
 import scipy.optimize as opt
 from scipy import stats
+from axionpy import units as u
 from axionpy import maxwell
 from axionpy import axis as axs
 from axionpy.constants import _rhodm
@@ -129,7 +128,7 @@ def loglikelihood(x, g, s, c):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    geff = nat.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
+    geff = u.convert(np.sqrt(_rhodm)*g, u.GeV) # rescale for covariance matrix
     chi2 = c.chi2(geff.to_value(u.GeV), s.to_value(u.GeV), x.to_value(u.GeV))
     logdet = c.logdet(geff.to_value(u.GeV), s.to_value(u.GeV))
     return -0.5*(chi2 + logdet)
