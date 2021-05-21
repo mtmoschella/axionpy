@@ -18,7 +18,7 @@ import scipy.optimize as opt
 from scipy import stats
 from axionpy import units as u
 from axionpy import maxwell
-from axionpy import axis as axs
+from axionpy import axis as ax
 from axionpy.constants import _rhodm
 from axionpy import matrix
 
@@ -26,25 +26,42 @@ def cov(m, t, **kwargs):
     """
     m : astropy.Quantity
     t : (N,) astropy.Quantity
-    
-    components : (optional) (3,N) array of axis components
-    axis : (optional)
-    lat, lon, theta, phi : (optional)
 
+    components : (optional) (3,N) array-like
+                 The components of the sensitive axis in the xyz basis
+                 evaluated over the time series t.
+                 One of components, axis, or (lat, lon, theta, phi) must be specified.    
+
+    axis : (optional) Axis 
+           Axis object representing the sensitive axis
+           One of components, axis, or (lat, lon, theta, phi) must be specified.
+
+    lat, lon, theta, phi : (optional) float
+           The latitude, longitude, and orientation of the sensitive axis.
+           One of components, axis, or (lat, lon, theta, phi) must be specified.
+    
     kwargs : passed to Axis.components if components is not specified
     
     Return CovMatrix object
     """
     if 'components' in kwargs:
         components = kwargs['components']
-    elif 'axis' in kwargs:
-        axis = kwargs['axis']
-        components = axis.components(t=t, basis='xyz', **kwargs)
-    elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
-        axis = axs.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
-        components = axis.components(t=t, basis='xyz', **kwargs)
     else:
-        raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+        if 'axis' in kwargs:
+            axis = kwargs['axis']
+        elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
+            axis = ax.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
+        else:
+            raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+
+        axis_kwargs = {}
+        if 'epoch' in kwargs:
+            axis_kwargs['epoch'] = kwargs['epoch']
+        if 'tstep_min' in kwargs:
+            axis_kwargs['tstep_min'] = kwargs['tstep_min']
+        if 'verbose' in kwargs:
+            axis_kwargs['verbose'] = kwargs['verbose']
+        components = axis.components(t=t, basis='xyz', **axis_kwargs)
     
     t1, t2 = np.meshgrid(t, t, indexing='ij')
     mx_1, mx_2 = np.meshgrid(components[0], components[0], indexing='ij')
