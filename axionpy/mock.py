@@ -107,14 +107,18 @@ def signal(m, g, **kwargs):
     
     if 'components' in kwargs:
         components = kwargs['components']
-    elif 'axis' in kwargs:
-        axis = kwargs['axis']
-        components = axis.components(t=t, basis='xyz', **kwargs)
-    elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
-        axis = axs.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
-        components = axis.components(t=t, basis='xyz', **kwargs)
     else:
-        raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+        if 'axis' in kwargs:
+            axis = kwargs['axis']
+        elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
+            axis = axs.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
+        else:
+            raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
+
+        axis_kwargs = {}
+        if 'epoch' in kwargs:
+            axis_kwargs['epoch'] = kwargs['epoch']
+        components = axis.components(t=t, basis='xyz', **axis_kwargs)
     
     if 'ntrials' in kwargs:
         ntrials = int(kwargs['ntrials'])
