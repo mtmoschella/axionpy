@@ -86,6 +86,7 @@ def _Psi_perp(x, **kwargs):
 def correlator(mode, m, t1, t2, **kwargs):
     """
     Computes the specified two-point correlation function. With rhodm=1.
+    In these units, the output is dimensionless.
 
     mode : str in {'AxAx', 'AxBx',
                    'AyAy', 'AyBy',
