@@ -178,7 +178,7 @@ class Axis:
         direction = np.sin(self.theta)*np.cos(self.phi)*east + np.sin(self.theta)*np.sin(self.phi)*north + np.cos(self.theta)*up
         return direction
 
-    def _time_series(self, tstart, M, tstep=100.*u.s):
+    def _time_series(self, tstart, M, tstep=100.*u.s, verbose=False):
         """
         tstart: astropy Time
         M: integer
@@ -187,7 +187,25 @@ class Axis:
         Returns (3, M) array
         """
         t = tstart + np.arange(M)*tstep
-        return self._dir(t)
+        if not verbose:
+            return self._dir(t)
+        else:
+            # display progress bar
+            # Note: this will be a good amount slower than in non-verbose mode
+            out = np.empty((3,M))
+            if M<100:
+                for i in tqdm(range(M), desc="Computing Axis Time Series"):
+                    out[:,i] = self._dir(t[i])
+                return out
+            else:
+                # read in buffers so we can display progress bar
+                buffersize = 50
+                nbuffers = np.ceil(M/buffersize).astype(int)
+                for buff in tqdm(range(nbuffers), desc="Computing Axis Time Series"):
+                    start = buff*buffersize
+                    stop = min(start+buffersize,M)
+                    out[:,start:stop] = self._dir(t[start:stop])
+                return out
 
     #def components(self, N=None, dt=None, tgrid=None, start='2020-01-01T00:00:00', xhat=_x, yhat=_y, zhat=_z, tstep_min=0.5*u.hr, buffersize=int(1.e7), fname='components.dat', overwrite=False, pbar=True):    
     def components(self, **kwargs):
@@ -224,6 +242,10 @@ class Axis:
                     Minimum time step for using full astropy EarthLocation evaluation. 
                     Time steps shorter than this will be evaluated using interpolation.
                     Defaults to 30 minutes.
+        
+        verbose : bool
+                  Display progress bars for longer computations.
+                  Defaults to False.
 
         ================================
         Output
@@ -281,6 +303,11 @@ class Axis:
         else:
             tstep_min = 30.*u.min
 
+        if 'verbose' in kwargs:
+            verbose = bool(kwargs['verbose'])
+        else:
+            verbose = False
+            
         output = np.empty((3,N))
 
         # decide whether or not to interpolate
@@ -312,7 +339,8 @@ class Axis:
                 tstep_min = 0.2*deltat # shorten tstep_min if necessary
             M = int(1+np.ceil((deltat/tstep_min)))
 
-            dirs = self._time_series(tstart, M, tstep_min) # (3, M)
+            dirs = self._time_series(tstart, M, tstep_min, verbose=verbose) # (3, M)
+            
             x = np.einsum('ij,i->j', dirs, xhat) # (M,)
             y = np.einsum('ij,i->j', dirs, yhat) # (M,)
             z = np.einsum('ij,i->j', dirs, zhat) # (M,)

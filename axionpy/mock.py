@@ -91,6 +91,11 @@ def signal(m, g, **kwargs):
         buffersize = kwargs['buffersize']
     else:
         buffersize = int(1.e7)
+
+    if 'verbose'in kwargs:
+        verbose = bool(kwargs['verbose'])
+    else:
+        verbose = False
         
     if "N" in kwargs and "dt" in kwargs:
         N = int(kwargs["N"])
@@ -121,7 +126,12 @@ def signal(m, g, **kwargs):
         axis_kwargs = {}
         if 'epoch' in kwargs:
             axis_kwargs['epoch'] = kwargs['epoch']
-        components = axis.components(t=t, basis='xyz', **axis_kwargs)
+        if dt is None:
+            axis_kwargs['t'] = t
+        else:
+            axis_kwargs['N'] = N
+            axis_kwargs['dt'] = dt
+        components = axis.components(basis='xyz', verbose=verbose, **axis_kwargs)
     
     if 'ntrials' in kwargs:
         ntrials = int(kwargs['ntrials'])
@@ -132,17 +142,14 @@ def signal(m, g, **kwargs):
         
     if 'fname' in kwargs:
         use_memmap = True
-        output = np.memmap(kwargs['fname'], dtype=float, mode='w+', shape=output_shape)
+        fname = kwargs['fname']
+        output = np.memmap(fname, dtype=float, mode='w+', shape=output_shape)
         geff = u.convert(np.sqrt(_rhodm)*g, u.GeV, value=True) # convert from dimensionlss to output units
     else:
         use_memmap = False
         output = np.empty(output_shape)*u.GeV
         geff = u.convert(np.sqrt(_rhodm)*g, u.GeV) # convert from dimensionlss to output units
 
-    if 'verbose'in kwargs:
-        verbose = bool(kwargs['verbose'])
-    else:
-        verbose = False
         
     ##### discretize time series
 
@@ -205,10 +212,10 @@ def signal(m, g, **kwargs):
     if verbose:
         if ntrials>1:
             # show progress bar for iteration over trials
-            trials_iterator = tqdm(trials_iterator)
+            trials_iterator = tqdm(trials_iterator, desc="Generating Random Trials")
         else:
             # who progress bar for the buffers within a single trial
-            buffers_iterator = tqdm(buffers_iterator)
+            buffers_iterator = tqdm(buffers_iterator, desc="Iterating Over Memory Buffers")
 
     # iterate over random trials
     for trial in trials_iterator:
@@ -237,12 +244,12 @@ def signal(m, g, **kwargs):
             t_eval = t_buffer.to_value(u.day) # for evaluating dimensionless interpolation
 
             # evaluate interpolated coefficients
-            Ax = interp.splev(t_eval, Ax_tk)
-            Bx = interp.splev(t_eval, Bx_tk)
-            Ay = interp.splev(t_eval, Ay_tk)
-            By = interp.splev(t_eval, By_tk)
-            Az = interp.splev(t_eval, Az_tk)
-            Bz = interp.splev(t_eval, Bz_tk)
+            Ax = interp.splev(t_eval, Ax_tck)
+            Bx = interp.splev(t_eval, Bx_tck)
+            Ay = interp.splev(t_eval, Ay_tck)
+            By = interp.splev(t_eval, By_tck)
+            Az = interp.splev(t_eval, Az_tck)
+            Bz = interp.splev(t_eval, Bz_tck)
 
             # generate full-frequency time resolution
             mt = (m*t_buffer).to_value(u.dimensionless_unscaled)
