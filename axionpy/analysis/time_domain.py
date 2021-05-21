@@ -85,6 +85,11 @@ def cov(m, t, **kwargs):
 def compute_coefficients(m, t, y):
     """
     Compute the A and B coefficients for the given time series of data.
+
+    These are defines such that
+    S(t) \propto A*cos(m*t) - B*sin(m*t)
+    (Note the sign convention for the B coefficient)
+    
     Physically, this only makes sense if the total time interval
     is much shorter than both 1 day and the axion coherence time.
 
@@ -116,7 +121,7 @@ def compute_coefficients(m, t, y):
     yval = y.to_value(unit)
     mt = (m*t).to_value(u.dimensionless_unscaled) # radians
     
-    M = np.transpose([ np.cos(mt), np.sin(mt) ]) # (N, 2)
+    M = np.transpose([ np.cos(mt), -1.*np.sin(mt) ]) # (N, 2)
     coeffs, resid, rank, s = np.linalg.lstsq(M, yval, rcond=None)
     A, B = coeffs
     return A*unit, B*unit

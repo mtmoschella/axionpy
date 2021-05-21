@@ -88,10 +88,16 @@ def correlator(mode, m, t1, t2, **kwargs):
     Computes the specified two-point correlation function. With rhodm=1.
     In these units, the output is dimensionless.
 
+    Parameters
+    --------------------
     mode : str in {'AxAx', 'AxBx',
                    'AyAy', 'AyBy',
                    'AzAz', 'AzBz'}
            Specifies which correlators to compute.
+           The convention for the off diagonal elements is that
+           'AxBx' specifies the correator <Ax(t1)*Bx(t2)>
+           where S(t) = (A*cos(m*t) - B*sin(m*t))*mhat_dot_xhat + ...
+           (Note the sign convention of the B coefficient).
            
     m : astropy.Quantity
         The axion mass, must have units equivalent to frequency
@@ -110,7 +116,7 @@ def correlator(mode, m, t1, t2, **kwargs):
     else:
         sigma = _sigma
         
-    x = (m*(t1-t2)*sigma**2).to_value(u.dimensionless_unscaled)
+    x = (m*(t2-t1)*sigma**2).to_value(u.dimensionless_unscaled)
     
     if mode=='AxAx':
         return _A_perp(x, **kwargs)*np.cos(_Psi_perp(x,**kwargs))
