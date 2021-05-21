@@ -5,8 +5,11 @@ import scipy.interpolate as interp
 import numpy as np
 from tqdm import tqdm
 
+
 from axionpy import maxwell
-from axionpy import axis as axs
+import axionpy.axis as axs
+import axionpy.units as u
+from axionpy.constants import _rhodm
 
 def signal(m, g, **kwargs):
     """
