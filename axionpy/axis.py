@@ -293,7 +293,7 @@ class Axis:
             deltat = N*dt
             tstart = epoch
         use_interp = N*tstep_min > deltat
-            
+        
         if not use_interp:
             # don't interpolate
             # just evaluate time series directly
@@ -306,8 +306,12 @@ class Axis:
             output[2,:] = np.einsum('ij,i->j', dirs, zhat) # (N,)
         else:
             # use interpolation
+
+            # make sure there are enough interpolation points
+            if tstep_min>0.2*deltat:
+                tstep_min = 0.2*deltat # shorten tstep_min if necessary
             M = int(1+np.ceil((deltat/tstep_min)))
-            
+
             dirs = self._time_series(tstart, M, tstep_min) # (3, M)
             x = np.einsum('ij,i->j', dirs, xhat) # (M,)
             y = np.einsum('ij,i->j', dirs, yhat) # (M,)
