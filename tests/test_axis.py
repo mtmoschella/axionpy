@@ -1,6 +1,5 @@
 import unittest
-import astropy.units as u
-
+import axionpy.units as u
 from axionpy import axis
 
 class TestAxis(unittest.TestCase):
