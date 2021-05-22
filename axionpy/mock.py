@@ -255,7 +255,7 @@ def signal(m, g, **kwargs):
             mt = (m*t_buffer).to_value(u.dimensionless_unscaled)
             cos = np.cos(mt)
             sin = np.sin(mt)
-            s = (Ax*cos+Bx*sin)*components[0,start:stop] + (Ay*cos+By*sin)*components[1,start:stop] + (Az*cos+Bz*sin)*components[2,start:stop] # dimensionles
+            s = (Ax*cos-Bx*sin)*components[0,start:stop] + (Ay*cos-By*sin)*components[1,start:stop] + (Az*cos-Bz*sin)*components[2,start:stop] # dimensionles
 
             if len(output_shape)==1:
                 output[start:stop] = geff*s # convert to appropriate output unit
