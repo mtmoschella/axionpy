@@ -117,7 +117,7 @@ def loglikelihood(az, bz, g, s):
 
     return -0.5*(chi2 + logdet)
 
-def maximize_likeihood(az, bz, s, g_scale=None):
+def maximize_likelihood(az, bz, s, g_scale=None):
     """
     Maximizes the likelihood with respect to the axion coupling g,
     asssuming a fixed noise parameter s.
