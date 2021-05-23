@@ -60,7 +60,7 @@ def loglikelihood(az, bz, g, s):
     # The distribution of sqrt(az**2 + bz**2) is a Rice distribution
     # see, e.g. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rice.html
     
-    l = stats.rice.pdf(amp, (amp_pred/s).to_value(u.dimensionless_unscaled), s.to_value(u.GeV))
+    l = stats.rice.pdf(amp, amp_pred/s.to_value(u.GeV), s.to_value(u.GeV))
     return np.log(l)
 
 def maximize_likelihood(az, bz, s, g_scale=None):
