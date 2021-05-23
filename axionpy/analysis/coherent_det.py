@@ -51,16 +51,16 @@ def loglikelihood(az, bz, g, s):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    amp = np.sqrt(az**2 + bz**2).to_value(u.GeV)
-    amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*_vo, u.GeV, value=True)
+    amp = np.sqrt(az**2 + bz**2)
+    amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*_vo, u.GeV)
 
     # az = az_true + noise
     # bz = bz_true + noise
     # model parameters determine sqrt(az_true**2 + bz_true**2) uniquely
     # The distribution of sqrt(az**2 + bz**2) is a Rice distribution
     # see, e.g. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rice.html
-    
-    l = stats.rice.pdf(amp, amp_pred/s.to_value(u.GeV), s.to_value(u.GeV))
+
+    l = stats.rice.pdf((amp/s).to_value(u.dimensionless_unscaled), (amp_pred/s).to_value(u.dimensionless_unscaled))
     return np.log(l)
 
 def maximize_likelihood(az, bz, s, g_scale=None):
