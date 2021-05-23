@@ -11,7 +11,7 @@ from axionpy.axis import Axis
 from axionpy.constants import _rhodm
 from axionpy.maxwell import _sigma, _vo
 
-def compute_coefficients(m, t, y):
+def compute_coefficients(m, t, y, **kwargs):
     """
     Compute the (Ax,Bx,Ay,By,Az,Bz) coefficients for the given time series of data.
     Physically, this only makes sense if the total time interval
