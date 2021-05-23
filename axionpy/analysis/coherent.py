@@ -7,9 +7,9 @@ import numpy as np
 import scipy.optimize as opt
 from scipy import stats
 from axionpy import units as u
-from axionpy import maxwell
-from axionpy import axis as axs
+from axionpy.axis import Axis
 from axionpy.constants import _rhodm
+from axionpy.maxwell import _sigma, _vo
 
 def compute_coefficients(m, t, y):
     """
@@ -65,7 +65,7 @@ def compute_coefficients(m, t, y):
         if 'axis' in kwargs:
             axis = kwargs['axis']
         elif 'lat' in kwargs and 'lon' in kwargs and 'theta' in kwargs and 'phi' in kwargs:
-            axis = ax.Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
+            axis = Axis(kwargs['lat'], kwargs['lon'], kwargs['theta'], kwargs['phi'])
         else:
             raise Exception("ERROR: must specify components, axis or (lat, lon, theta, phi)")
 
@@ -110,14 +110,14 @@ def loglikelihood(a, b, g, s):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    s_eff = np.array([ u.convert(np.sqrt(g*_rhodm*maxwell._sigma**2), u.GeV, value=True), u.convert(np.sqrt(g*_rhodm*maxwell._sigma**2), u.GeV, value=True), u.convert(np.sqrt(g*_rhodm*(maxwell._sigma**2 + maxwell._vo**2)), u.GeV, value=True)])*u.GeV # (3,)
+    s_eff = np.array([ u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*(_sigma**2 + _vo**2)), u.GeV, value=True)])*u.GeV # (3,)
 
     chi2 = np.sum(((a**2 + b**2)/(s_eff**2 + s**2)).to_value(u.dimensionless_unscaled))
     logdet = np.sum(np.log(2.*np.pi*((s_eff**2 + s**2).to_value(u.GeV**2))**2))
 
     return -0.5*(chi2 + logdet)
     
-def maximize_likeihood(a, b, s, g_scale=1.e-10*u.GeV**-1):
+def maximize_likeihood(a, b, s, g_scale=None):
     """
     Maximizes the likelihood with respect to the axion coupling g,
     asssuming a fixed noise parameter s.
@@ -133,7 +133,7 @@ def maximize_likeihood(a, b, s, g_scale=1.e-10*u.GeV**-1):
     g_scale : (optional) astropy.Quantity (GeV^-1 or natural equivalent)
               Rough scale/estimate for the coupling g.
               Used for initial conditions in the optimization routine.
-              Defaults to 1.e-10*u.GeV**-1
+              Defaults to sqrt(az**2 + bz**2)/sqrt(rhodm*sigma**2)
 
     Returns:
     ------------------------
@@ -150,13 +150,16 @@ def maximize_likeihood(a, b, s, g_scale=1.e-10*u.GeV**-1):
             return -1.*ll
         raise Exception("ERROR: non-finite ll")
 
-    p0 = np.log10(g_scale.to_value(u.GeV**-1))
+    if g_scale is None:
+        p0 = np.log10(u.convert(np.sqrt(az**2 + bz**2)/np.sqrt(_rhodm*_sigma**2), u.GeV**-1, value=True))
+    else:
+        p0 = np.log10(g_scale.to_value(u.GeV**-1))
     res = opt.minimize(f_to_minimize, p0, bounds=[None,0.0])
     log10g = res.x
     maxll = -1.*res.fun
     return 10.**log10g*u.GeV**-1, maxll
 
-def frequentist_upper_limit(a, b, s, confidence=0.95, gmax=None, llmax=None, g_scale=1.e-10*u.GeV**-1):
+def frequentist_upper_limit(a, b, s, confidence=0.95, gmax=None, llmax=None, g_scale=None):
     """
     Computes the axion coupling constant g that is the frequentist upper limit 
     at the specified constant, that is, the value of g such that the profile likelihood ll 
