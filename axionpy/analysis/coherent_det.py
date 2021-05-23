@@ -4,6 +4,7 @@ This module for the "deterministic" time domain analysis.
 This analysis is never fully correct, but only makes sense
 when the coherence time is much longer than the experimental integration time,
 so that incoherent fluctuations can be ignored.
+This comparable to the analysis modules coherent.py and coherent_1d.py
 """
 
 import numpy as np
@@ -12,6 +13,7 @@ import scipy.stats as stats
 from axionpy import units as u
 from axionpy.maxwell import _vo
 from axionpy.constants import _rhodm
+from axionpy.analysis.coherent_1d import compute_coefficients # compute coefficients works the same as in the coherent_1d analysis
 
 def _g(a, b):
     """
@@ -83,157 +85,64 @@ def _b(g, p):
     """
     return u.convert(g*np.sin(p)*np.sqrt(_rhodm)*_vo, u.GeV)
 
-def loglikelihood(x, mt, mz, g, p, s):
+
+def loglikelihood(az, bz, g, s):
     """
     Computes the loglikelihood of the data given the model parameters.
 
     Parameters
-    ------------------
-    x : (N,) astropy.Quantity (GeV)
-        The time series of raw data
-    
-    mt : (N,) array-like
-         The dimensionless time series m*t 
-         where t is the time 
-         and m is the axion mass
-
-    mz : (N,) array-like
-         The component of the sensitive axis along the z direction.
-         The deterministic analysis assumes that the axion field only
-         has gradient in the z direction (parallel to vsun)
-
-    g : astropy.Quantity (GeV^-1 or natxural equivalent)
+    ----------------
+    az, bz : astropy.Quantity (GeV)
+             The Az, Bz fit coefficients for the z-component of the xyz basis.
+           
+    g : astropy.Quantity (GeV^-1 or natural equivalent)
         The axion coupling constant.
 
-    p : float
-        The axion phase
-
     s : astropy.Quantity (GeV)
-        The noise parameter, a constant white noise uncertainty on each data point
+        The constant uncertainty on the A and B coefficients.
 
     Returns
     ------------------
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    a = _a(g,p)
-    b = _b(g,p)
-    x_pred = (a*np.cos(mt) + b*np.sin(mt))*mz # exact model prediction
-    chi2 = np.sum((((x-x_pred)/s).to_value(u.dimensionless_unscaled))**2)
-    logdet = 2.*len(x)*np.log(s.to_value(u.GeV))
+    amp = np.sqrt(az**2 + bz**2).to_value(u.GeV)
+    amp_pred = u.convert(g*np.sqrt(_rhodm)*vo, u.GeV, value=True)
+
+    chi2 = (amp-amp_pred)**2/s.to_value(u.GeV)**2
+    logdet = np.log(2.*np.pi*s.to_value(u.GeV)**2)
     return -0.5*(chi2 + logdet)
 
-def maximize_likelihoood_deterministic(x, mt, mz):
+def maximize_likelihoood(az, bz, s):
     """
-    Maximizes the likelihood with respect to 
-    the axion coupling g, phase p, and the noise parameter s
-
-    Parameters
-    ------------------
-    x : (N,) astropy.Quantity (GeV)
-        The time series of raw data
+    Maximizes the likelihood with respect to the axion coupling g,
+    asssuming a fixed noise parameter s.
     
-    mt : (N,) array-like
-         The dimensionless time series m*t 
-         where t is the time 
-         and m is the axion mass
+    Parameters:
+    ------------------------
+    az, bz : astropy.Quantity (GeV)
+             The Az, Bz fit coefficients for the z-component of the xyz basis.
 
-    mz : (N,) array-like
-         The component of the sensitive axis along the z direction.
-         The deterministic analysis assumes that the axion field only
-         has gradient in the z direction (parallel to vsun)
-    
+    s : astropy.Quantity (GeV)
+        The constant uncertainty on the A and B coefficients.
+
     Returns:
     ------------------------
     g : astropy.Quantity (GeV^-1)
         The best-fit coupling constant.
 
-    p : float
-        The best-fit phase in radians.
-
-    s : astropy.Quantity (GeV)
-        The best-fit noise parameter.
-
     maxll : float
             The value of maximum value of the loglikelihood function.
     """
-    M = np.transpose([ np.cos(mt)*mz, np.sin(mt)*mz])
-
-    # get (a, b, s) in GeV via least-squares solution
-    (a,b), resid, rank, sing = np.linalg.lstsq(M, x.to_value(u.GeV), rcond=None)
-    s = np.sqrt(resid[0]/len(x))*u.GeV
-    a *= u.GeV
-    b *= u.GeV
     
-    # convert (a, b) to (g, p)
-    g = _g(a,b)
-    p = _p(a,b)
+    g = _g(az,bz)
 
     # compute the maximum value of the likelihood
-    maxll = loglikelihood(x, mt, mz, g, p, s)
+    maxll = loglikelihood(az, bz, g, s)
 
-    return g, p, s, maxll
-
-def profile_likelihood(x, mt, mz, g, p0=1.):
-    """
-    Maximizes the likelihood with respect to 
-    the axion phase p, and the noise parameter s
-    for a given value of the axion coupling g
-
-    Parameters
-    ------------------
-    x : (N,) astropy.Quantity (GeV)
-        The time series of raw data
+    return g, maxll
     
-    mt : (N,) array-like
-         The dimensionless time series m*t 
-         where t is the time 
-         and m is the axion mass
-
-    mz : (N,) array-like
-         The component of the sensitive axis along the z direction.
-         The deterministic analysis assumes that the axion field only
-         has gradient in the z direction (parallel to vsun)
-
-    g : astropy.Quantity (GeV^-1)
-        The fixed value of the axion coupling.
-
-    p0 : (optional) float
-         The initial guess for the axion phase in radians.
-
-    Returns:
-    ------------------------
-    p : float
-        The best-fit phase in radians.
-
-    s : astropy.Quantity (GeV)
-        The best-fit noise parameter.
-
-    maxll : float
-            The value of maximum value of the loglikelihood function.
-    """
-
-    amp = u.convert(g*np.sqrt(_rhodm)*_vo, u.GeV, value=True) # precompute unit conversion for efficiency
-    def f_to_minimize(p):
-        a = amp*np.cos(p)
-        b = amp*np.sin(p)
-        x_pred = (a*np.cos(mt) + b*np.sin(mt))*mz
-        return np.sum((x.to_value(u.GeV)-x_pred)**2) # ssr in GeV
-
-    if amp==0.0:
-        p = 0.0
-        residual = np.sum(x.to_value(u.GeV)**2)
-    else:
-        res = opt.minimize(f_to_minimize, p0)
-        p = res.x
-        residual = res.fun
-
-    s = np.sqrt(residual/len(X))*u.GeV
-    maxll = loglikelihood(x, mt, mz, amp*np.cos(p)*u.GeV, amp*np.sin(p)*u.GeV, s)
-    
-    return p, s, maxll
-    
-def frequentist_upper_limit(x, mt, mz, confidence=0.95, gmax=None, pmax=None, smax=None, llmax=None, p0=1.0):
+def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None):
     """
     Computes the axion coupling constant g that is the frequentist upper limit 
     at the specified constant, that is, the value of g such that the profile likelihood ll 
@@ -246,20 +155,13 @@ def frequentist_upper_limit(x, mt, mz, confidence=0.95, gmax=None, pmax=None, sm
     is a half-chi-squared distributed random variable under the null hypothesis, 
     rather than a full-chi-squared distriubed random variable.
 
-    Parameters
-    ------------------
-    x : (N,) astropy.Quantity (GeV)
-        The time series of raw data
-    
-    mt : (N,) array-like
-         The dimensionless time series m*t 
-         where t is the time 
-         and m is the axion mass
+    Parameters:
+    ------------------------
+    az, bz : astropy.Quantity (GeV)
+             The Az, Bz fit coefficients for the z-component of the xyz basis.
 
-    mz : (N,) array-like
-         The component of the sensitive axis along the z direction.
-         The deterministic analysis assumes that the axion field only
-         has gradient in the z direction (parallel to vsun)
+    s : astropy.Quantity (GeV)
+        The constant uncertainty on the A and B coefficients.
 
     confidence : (optional) float
                  The requested confidence for the upper limit. 
@@ -269,39 +171,29 @@ def frequentist_upper_limit(x, mt, mz, confidence=0.95, gmax=None, pmax=None, sm
     gmax : (optional) astropy.Quantity (GeV^-1)
            The best-fit coupling constant. 
            If not specified then the maximize_likelihood function is called.
-
-    pmax : (optional) float
-           The best-fit phase parameter.
-           If not specified then the maximize_likelihood function is called.
-
-    smax : (optional) astropy.Quantity (GeV)
-           The best-fit noise parameter.
-           If not specified then the maximize_likelihood function is called.
     
     llmax : (optional) float
             The maximum value of the loglikelihood function.
             If not specified, this is computed, either using the specified gmax and smax
             or from the call to maximize_likelihood.
 
-    p0 : (optional) float
-         The initial guess for the axion phase in radians.
-
-    Returns:
-    ------------------------
+    Returns
+    --------------
     glim : astropy.Quantity (GeV^-1)
            The upper limit on the coupling constant for the model at the specified confidence
     """
     
-    if gmax is None or pmax is None or smax is None:
-        gmax, pmax, smax, maxll = maximize_likelihood(x, mt, mz)
+    if gmax is None:
+        gmax, llmax = maximize_likelihood(az, bz, s)
     elif llmax is None:
-        llmax = loglikelihood(x, mt, mz, gmax, pmax, smax)
+        llmax = loglikelihood(az, bz, gmax, s)
 
     ts_critical = stats.chi2.ppf(1.-2.*(1.-confidence), df=1)
     ll_critical = llmax - 0.5*ts_critical
 
+    # NOTE: The likelihood is a 1D Gaussian function, this could be implemented analytically
     def f_root(log10g):
-        p, s, ll = profile_likelihood(x, mt, mz, 10.**log10g*u.GeV**-1, p0=p0)
+        ll = loglikelihood(az, bz, 10.**log10g*u.GeV**-1, s)
         return ll-ll_critical
 
     log10gmax = np.log10(gmax.to_value(u.GeV**-1))
