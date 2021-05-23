@@ -154,7 +154,7 @@ def maximize_likelihood(a, b, s, g_scale=None):
         p0 = np.log10(u.convert(np.sqrt(a[-1]**2 + b[-1]**2)/np.sqrt(_rhodm*_sigma**2), u.GeV**-1, value=True))
     else:
         p0 = np.log10(g_scale.to_value(u.GeV**-1))
-    res = opt.minimize(f_to_minimize, p0, bounds=[None,0.0])
+    res = opt.minimize(f_to_minimize, p0, bounds=[[None,0.0]])
     log10g = res.x
     maxll = -1.*res.fun
     return 10.**log10g*u.GeV**-1, maxll
