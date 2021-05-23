@@ -113,9 +113,9 @@ def loglikelihood(a, b, g, s):
     s_eff = np.array([ u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*(_sigma**2 + _vo**2)), u.GeV, value=True)])*u.GeV # (3,)
 
     chi2 = np.sum(((a**2 + b**2)/(s_eff**2 + s**2)).to_value(u.dimensionless_unscaled))
-    logdet = np.sum(np.log(2.*np.pi*((s_eff**2 + s**2).to_value(u.GeV**2))**2))
+    logdet = np.sum(np.log(2.*np.pi*(s_eff**2 + s**2).to_value(u.GeV**2)))
 
-    return -0.5*(chi2 + logdet)
+    return -0.5*chi2 - logdet
     
 def maximize_likelihood(a, b, s, g_scale=None):
     """
