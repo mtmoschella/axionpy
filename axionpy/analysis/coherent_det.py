@@ -61,6 +61,8 @@ def loglikelihood(az, bz, g, s):
     # see, e.g. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rice.html
 
     l = stats.rice.pdf((amp/s).to_value(u.dimensionless_unscaled), (amp_pred/s).to_value(u.dimensionless_unscaled))
+    if l<1.e-10:
+        return np.log(1.e-10)
     return np.log(l)
 
 def maximize_likelihood(az, bz, s, g_scale=None):
