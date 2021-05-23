@@ -63,7 +63,7 @@ def loglikelihood(az, bz, g, s):
     l = stats.rice.pdf(amp, (amp_pred/s).to_value(u.dimensionless_unscaled), s.to_value(u.GeV))
     return np.log(l)
 
-def maximize_likelihood(az, bz, s):
+def maximize_likelihood(az, bz, s, g_scale=None):
     """
     Maximizes the likelihood with respect to the axion coupling g,
     asssuming a fixed noise parameter s.
@@ -75,6 +75,11 @@ def maximize_likelihood(az, bz, s):
 
     s : astropy.Quantity (GeV)
         The constant uncertainty on the A and B coefficients.
+
+    g_scale : (optional) astropy.Quantity (GeV^-1 or natural equivalent)
+              Rough scale/estimate for the coupling g.
+              Used for initial conditions in the optimization routine.
+              Defaults to sqrt(az**2 + bz**2)/sqrt(2*rhodm*sigma**2)
 
     Returns:
     ------------------------
@@ -100,7 +105,7 @@ def maximize_likelihood(az, bz, s):
     maxll = -1.*res.fun
     return 10.**log10g*u.GeV**-1, maxll
     
-def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None):
+def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None, g_scale=None):
     """
     Computes the axion coupling constant g that is the frequentist upper limit 
     at the specified constant, that is, the value of g such that the profile likelihood ll 
@@ -134,6 +139,11 @@ def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None):
             The maximum value of the loglikelihood function.
             If not specified, this is computed, either using the specified gmax and smax
             or from the call to maximize_likelihood.
+
+    g_scale : (optional) astropy.Quantity (GeV^-1 or natural equivalent)
+              Rough scale/estimate for the coupling g.
+              Used for initial conditions in the optimization routine.
+              Defaults to sqrt(az**2 + bz**2)/sqrt(2*rhodm*sigma**2)
 
     Returns
     --------------
