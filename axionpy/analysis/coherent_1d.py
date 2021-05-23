@@ -9,7 +9,7 @@ import numpy as np
 import scipy.optimize as opt
 from scipy import stats
 from axionpy import units as u
-import axionpy.axis import Axis
+from axionpy.axis import Axis
 from axionpy.constants import _rhodm
 from axionpy.maxwell import _vo
 
