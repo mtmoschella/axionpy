@@ -84,13 +84,21 @@ def maximize_likelihoood(az, bz, s):
     maxll : float
             The value of maximum value of the loglikelihood function.
     """
-    
-    g = u.convert(np.sqrt(az**2 + bz**2)/(np.sqrt(2.*_rhodm)*_vo), u.GeV**-1)
 
-    # compute the maximum value of the likelihood
-    maxll = loglikelihood(az, bz, g, s)
+    def f_to_minimize(log10g):
+        ll = loglikelihood(az, bz, 10.**log10g*u.GeV**-1, s)
+        if np.isfinite(ll):
+            return -1.*ll
+        raise Exception("ERROR: non-finite ll")
 
-    return g, maxll
+    if g_scale is None:
+        p0 = np.log10(u.convert(np.sqrt(az**2 + bz**2)/np.sqrt(2.*_rhodm*_vo**2), u.GeV**-1, value=True))
+    else:
+        p0 = np.log10(g_scale.to_value(u.GeV**-1))
+    res = opt.minimize(f_to_minimize, p0, bounds=[[None,0.0]])
+    log10g = res.x
+    maxll = -1.*res.fun
+    return 10.**log10g*u.GeV**-1, maxll
     
 def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None):
     """
@@ -141,7 +149,6 @@ def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None):
     ts_critical = stats.chi2.ppf(1.-2.*(1.-confidence), df=1)
     ll_critical = llmax - 0.5*ts_critical
 
-    # NOTE: The likelihood is a 1D Gaussian function, this could be implemented analytically
     def f_root(log10g):
         ll = loglikelihood(az, bz, 10.**log10g*u.GeV**-1, s)
         return ll-ll_critical
