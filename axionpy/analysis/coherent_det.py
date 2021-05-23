@@ -94,7 +94,8 @@ def maximize_likelihood(az, bz, s, g_scale=None):
         ll = loglikelihood(az, bz, 10.**log10g*u.GeV**-1, s)
         if np.isfinite(ll):
             return -1.*ll
-        raise Exception("ERROR: non-finite ll")
+        print("WARNING: non-finite ll: "+str(ll))
+        return -1.*ll
 
     if g_scale is None:
         p0 = np.log10(u.convert(np.sqrt(az**2 + bz**2)/np.sqrt(2.*_rhodm*_vo**2), u.GeV**-1, value=True))
