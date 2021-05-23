@@ -94,7 +94,7 @@ def maximize_likelihood(az, bz, s, g_scale=None):
         ll = loglikelihood(az, bz, 10.**log10g*u.GeV**-1, s)
         if np.isfinite(ll):
             return -1.*ll
-        print("WARNING: non-finite ll: "+str(ll))
+        #print("WARNING: non-finite ll: "+str(ll))
         return -1.*ll
 
     if g_scale is None:
@@ -104,6 +104,8 @@ def maximize_likelihood(az, bz, s, g_scale=None):
     res = opt.minimize(f_to_minimize, p0, bounds=[[None,0.0]])
     log10g = res.x
     maxll = -1.*res.fun
+    if not np.isfinite(maxll):
+        raise Exception("ERROR: maxll is not finite")
     return 10.**log10g*u.GeV**-1, maxll
     
 def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None, g_scale=None):
@@ -169,6 +171,9 @@ def frequentist_upper_limit(az, bz, s, confidence=0.95, gmax=None, llmax=None, g
 
     log10glim = res.root
     fmin = np.absolute(f_root(log10glim))
+    if not np.isfinite(fmin):
+        raise Exception("ERROR: fmin is not finite")
+
     if fmin>0.1:
         print("WARNING: root finding may have failed")
     return 10.**log10glim*u.GeV**-1
