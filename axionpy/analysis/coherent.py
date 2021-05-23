@@ -110,11 +110,9 @@ def loglikelihood(a, b, g, s):
     ll : float
          The log-likelihood evaluated with the given data and model parameters.
     """
-    s_eff = np.array([ u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*_sigma**2), u.GeV, value=True), u.convert(np.sqrt(g**2*_rhodm*(_sigma**2 + _vo**2)), u.GeV, value=True)])*u.GeV # (3,)
-
+    s_eff = u.convert(g*np.sqrt(_rhodm), u.GeV)*np.array([ _sigma, _sigma, np.sqrt(_sigma**2 + _vo**2)]) # (3,)
     chi2 = np.sum(((a**2 + b**2)/(s_eff**2 + s**2)).to_value(u.dimensionless_unscaled))
     logdet = np.sum(np.log(2.*np.pi*(s_eff**2 + s**2).to_value(u.GeV**2)))
-
     return -0.5*chi2 - logdet
     
 def maximize_likelihood(a, b, s, g_scale=None):
