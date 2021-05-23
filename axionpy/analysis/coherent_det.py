@@ -63,7 +63,7 @@ def loglikelihood(az, bz, g, s):
     l = stats.rice.pdf(amp, (amp_pred/s).to_value(u.dimensionless_unscaled), s.to_value(u.GeV))
     return np.log(l)
 
-def maximize_likelihoood(az, bz, s):
+def maximize_likelihood(az, bz, s):
     """
     Maximizes the likelihood with respect to the axion coupling g,
     asssuming a fixed noise parameter s.
