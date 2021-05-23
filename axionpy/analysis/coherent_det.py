@@ -52,7 +52,7 @@ def loglikelihood(az, bz, g, s):
          The log-likelihood evaluated with the given data and model parameters.
     """
     amp = np.sqrt(az**2 + bz**2).to_value(u.GeV)
-    amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*vo, u.GeV, value=True)
+    amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*_vo, u.GeV, value=True)
 
     # az = az_true + noise
     # bz = bz_true + noise
