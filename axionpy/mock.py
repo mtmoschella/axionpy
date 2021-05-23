@@ -29,7 +29,7 @@ def noise(**kwargs):
 
     ntrials : (optional) int
               If specified, the number of independent signals to generate.
-              If specified, the output will be shape (N, ntrials), otherwise
+              If specified, the output will be shape (ntrials,N), otherwise
               the output will be shape (N,)
 
     fname : (optional) str
