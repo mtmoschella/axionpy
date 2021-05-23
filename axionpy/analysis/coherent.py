@@ -85,7 +85,7 @@ def compute_coefficients(m, t, y, **kwargs):
     M = np.transpose([ np.cos(mt)*components[0], -1.*np.sin(mt)*components[0], np.cos(mt)*components[1], -1.*np.sin(mt)*components[1], np.cos(mt)*components[2], -1.*np.sin(mt)*components[2] ]) # (N, 6)
     coeffs, resid, rank, s = np.linalg.lstsq(M, yval, rcond=None)
     Ax, Bx, Ay, By, Az, Bz = coeffs
-    sigma = np.sqrt(2.*resid[0]/len(t))
+    sigma = np.sqrt(6.*resid[0])/len(t)
     A = np.array([Ax, Ay, Az])
     B = np.array([Bx, By, Bz])
     return A*unit, B*unit, sigma*unit

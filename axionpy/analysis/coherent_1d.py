@@ -87,7 +87,7 @@ def compute_coefficients(m, t, y, **kwargs):
     M = np.transpose([ np.cos(mt)*components[2], -1.*np.sin(mt)*components[2] ]) # (N, 2)
     coeffs, resid, rank, s = np.linalg.lstsq(M, yval, rcond=None)
     Az, Bz = coeffs
-    sigma = np.sqrt(2.*resid[0]/len(t))
+    sigma = np.sqrt(6.*resid[0])/len(t)
     return Az*unit, Bz*unit, sigma*unit
         
 def loglikelihood(az, bz, g, s):
