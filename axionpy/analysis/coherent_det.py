@@ -29,62 +29,7 @@ def _g(a, b):
     g : astropy.Quantity (GeV^-1)
         The axion coupling constant
     """
-    return u.convert(np.sqrt(a**2 + b**2)/(np.sqrt(_rhodm)*_vo), u.GeV**-1)
-
-def _p(a, b):
-    """
-    Given the amplitudes a and b, return the phase p.
-
-    Parameters
-    --------------------
-    a, b : astropy.Quantity (GeV)
-           The axion amplitudes.
-
-    Returns
-    --------------------
-    p : float
-        The axion phase in radians.
-    """
-    return np.arctan2(b.to_value(u.GeV), a.to_value(u.GeV))
-
-def _a(g, p):
-    """
-    Given the axion coupling g and phase p, return the cosine amplitude a
-
-    Parameters
-    --------------------
-    g : astropy.Quantity (GeV^-1)
-        The axion coupling constant
-    
-    p : float
-        The axion phase in radians.
-
-    Returns
-    --------------------
-    a : astropy.Quantity (GeV)
-        The axion cosine amplitude.
-    """
-    return u.convert(g*np.cos(p)*np.sqrt(_rhodm)*_vo, u.GeV)
-
-def _b(g, p):
-    """
-    Given the axion coupling g and phase p, return the sine amplitude b
-
-    Parameters
-    --------------------
-    g : astropy.Quantity (GeV^-1)
-        The axion coupling constant
-    
-    p : float
-        The axion phase in radians.
-
-    Returns
-    --------------------
-    b : astropy.Quantity (GeV)
-        The axion sine amplitude.
-    """
-    return u.convert(g*np.sin(p)*np.sqrt(_rhodm)*_vo, u.GeV)
-
+    return 
 
 def loglikelihood(az, bz, g, s):
     """
@@ -107,7 +52,7 @@ def loglikelihood(az, bz, g, s):
          The log-likelihood evaluated with the given data and model parameters.
     """
     amp = np.sqrt(az**2 + bz**2).to_value(u.GeV)
-    amp_pred = u.convert(g*np.sqrt(_rhodm)*vo, u.GeV, value=True)
+    amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*vo, u.GeV, value=True)
 
     chi2 = (amp-amp_pred)**2/s.to_value(u.GeV)**2
     logdet = np.log(2.*np.pi*s.to_value(u.GeV)**2)
@@ -135,7 +80,7 @@ def maximize_likelihoood(az, bz, s):
             The value of maximum value of the loglikelihood function.
     """
     
-    g = _g(az,bz)
+    g = u.convert(np.sqrt(az**2 + bz**2)/(np.sqrt(2.*_rhodm)*_vo), u.GeV**-1)
 
     # compute the maximum value of the likelihood
     maxll = loglikelihood(az, bz, g, s)
