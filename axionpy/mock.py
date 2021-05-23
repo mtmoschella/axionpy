@@ -11,6 +11,121 @@ import axionpy.axis as axs
 import axionpy.units as u
 from axionpy.constants import _rhodm
 
+def noise(**kwargs):
+    """
+    Convenience function that generates random Gaussian white noise over the specified time series.
+    
+    The noise is always returned as dimenionless with zero mean and variance of 1.
+
+    Parameters
+    ------------------
+    t : (N,) astropy.Quantity (time)
+        The time series over which to generate the signal.
+        Either t or N must be specified.
+
+    N : int 
+        The size of time series.
+        Either t or N and dt must be specified.    
+
+    ntrials : (optional) int
+              If specified, the number of independent signals to generate.
+              If specified, the output will be shape (N, ntrials), otherwise
+              the output will be shape (N,)
+
+    fname : (optional) str
+            Filename or path to file.
+            If specified creates (or overwrites) a numpy.memmap array for the output
+            at the specified location. Returns a read-only numpy.memmap.
+
+    buffersize : (optional) int
+                 The maximum size of an array to read into memory at one time.
+                 Defaults to 10,000,000
+                 Note: multiple arrays of size (buffersize,) may in memory at once.
+
+    verbose : (optional) boolean
+              Display progress bar on screen.
+              Defaults to False.
+    Returns
+    ---------------------
+    noise : (N,) or (ntrials, N) numpy.array or numpy.memmap
+            Gaussian white noise.
+            If fname is specified, the output is a memmap ndarray
+    """
+    # parse kwargs
+    if 'buffersize' in kwargs:
+        buffersize = kwargs['buffersize']
+    else:
+        buffersize = int(1.e7)
+
+    if 'verbose'in kwargs:
+        verbose = bool(kwargs['verbose'])
+    else:
+        verbose = False
+        
+    if "N" in kwargs:
+        N = int(kwargs["N"])
+    elif "t" in kwargs:
+        N = len(kwargs["t"])
+        if N>buffersize:
+            print("WARNING: The specified time array is larger than the buffersize.")
+    else:
+        raise Exception("ERROR: Invalid kwargs. Must specify either N or t.")
+
+    nbuffers = np.ceil(N/buffersize).astype(int)
+    
+    if 'ntrials' in kwargs:
+        ntrials = int(kwargs['ntrials'])
+        output_shape = (ntrials, N)
+    else:
+        ntrials = 1
+        output_shape = (N,)
+        
+    if 'fname' in kwargs:
+        use_memmap = True
+        fname = kwargs['fname']
+        output = np.memmap(fname, dtype=float, mode='w+', shape=output_shape)
+    else:
+        use_memmap = False
+        output = np.empty(output_shape)
+        
+    ###### generate full time series
+    # prepare iterators (with progress bar if verbose is specified)
+    trials_iterator = range(ntrials)
+    buffers_iterator = range(nbuffers)
+    if verbose:
+        if ntrials>1:
+            # show progress bar for iteration over trials
+            trials_iterator = tqdm(trials_iterator, desc="Generating Random Trials")
+        else:
+            # who progress bar for the buffers within a single trial
+            buffers_iterator = tqdm(buffers_iterator, desc="Iterating Over Memory Buffers")
+
+    # iterate over random trials
+    for trial in trials_iterator:
+        # iterate over memory buffers
+        for buff in buffers_iterator:
+            start = buff*buffersize
+            stop = min(start+buffersize, N)
+            if start>=stop:
+                # redundant failsafe
+                break
+
+            n = np.random.normal(size=stop-start) # dimenionless, standard normal Gaussian
+
+            if len(output_shape)==1:
+                output[start:stop] = n # convert to appropriate output unit
+            else:
+                output[trial,start:stop] = n # convert to appropriate output unit
+            
+    if use_memmap:
+        # if using a memmap, delete the w+ memmap and return a read-only memmap
+        del output
+        output = np.memmap(fname, dtype=float, mode='r', shape=output_shape)
+        
+    return output
+    
+            
+
 def signal(m, g, **kwargs):
     """
     Generates a random signal over the specified time series.
