@@ -53,6 +53,14 @@ def loglikelihood(az, bz, g, s):
          The log-likelihood evaluated with the given data and model parameters.
     """
     amp = np.sqrt(az**2 + bz**2)
+    if g.to_value(u.GeV**-1)==0.0:
+      prefactor = np.log((amp/s**2).to_value(u.GeV**-1))
+      chi2 = - 0.5*(amp**2/s**2).to_value(u.dimensionless_unscaled)
+      ll = prefactor + chi2
+      if not np.isfinite(ll):
+          raise Exception("ERROR: non-finite null log-likelihood")
+      return ll
+  
     amp_pred = u.convert(g*np.sqrt(2.*_rhodm)*_vo, u.GeV)
 
     # az = az_true + noise
@@ -61,9 +69,18 @@ def loglikelihood(az, bz, g, s):
     # The distribution of sqrt(az**2 + bz**2) is a Rice distribution
     # see, e.g. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rice.html
 
-    #l = stats.rice.pdf((amp/s).to_value(u.dimensionless_unscaled), (amp_pred/s).to_value(u.dimensionless_unscaled))
-    #return np.log(l)
-    ll = np.log((amp/s**2).to_value(u.GeV**-1)) - 0.5*((amp**2 + amp_pred**2)/s**2).to_value(u.dimensionless_unscaled) + np.log(i0((amp*amp_pred/s**2).to_value(u.dimensionless_unscaled)))
+    l = stats.rice.pdf((amp/s).to_value(u.dimensionless_unscaled), (amp_pred/s).to_value(u.dimensionless_unscaled))/s.to_value(u.GeV)
+    return np.log(l)
+
+    prefactor = np.log((amp/s**2).to_value(u.GeV**-1)) 
+    chi2 = - 0.5*((amp**2 + amp_pred**2)/s**2).to_value(u.dimensionless_unscaled)
+    bessel = + np.log(i0((amp*amp_pred/s**2).to_value(u.dimensionless_unscaled)))
+    ll = prefactor + chi2 + bessel
+
+    print((amp*amp_pred/s**2).to_value(u.dimensionless_unscaled))
+    print(prefactor, bessel, ll)
+    #print(np.log(l), ll, ll==np.log(l))
+    exit()
     return ll
 
 def maximize_likelihood(az, bz, s, g_scale=None):
@@ -107,6 +124,7 @@ def maximize_likelihood(az, bz, s, g_scale=None):
     res = opt.minimize(f_to_minimize, p0, bounds=[[None,0.0]])
     log10g = res.x
     maxll = -1.*res.fun
+
     if not np.isfinite(maxll):
         raise Exception("ERROR: maxll is not finite")
     return 10.**log10g*u.GeV**-1, maxll
