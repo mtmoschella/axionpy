@@ -317,7 +317,7 @@ def frequentist_upper_limit(A, B, c, confidence=0.95, gmax=None, smax=None, llma
 
     log10gmax = np.log10(gmax.to_value(u.GeV**-1))
 
-    res = opt.root_scalar(f_root, bracket=[log10gmax, -6.])
+    res = opt.root_scalar(f_root, bracket=[log10gmax, -4.])
 
     log10glim = res.root
     fmin = np.absolute(f_root(log10glim))
