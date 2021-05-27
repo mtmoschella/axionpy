@@ -82,7 +82,7 @@ def cov(m, t, **kwargs):
 
     return matrix.CovMatrix(C)
 
-def compute_coefficients(m, t, y):
+def compute_coefficients(m, t, y, err=False):
     """
     Compute the A and B coefficients for the given time series of data.
 
@@ -105,12 +105,20 @@ def compute_coefficients(m, t, y):
     y : (N,) astropy.Quantity
         The observed data. Can have arbitrary astropy units.
 
+    err : bool
+          If true, returns the Gaussian error estimate for A and B.
+          This is equal to sqrt(2*SSR)/N.
+
     Returns
     ---------------
     A, B : astropy.Quantity
            The A and B coefficients such that 
            y = A*cos(m*t) + B*sin(m*t) is the least-squares solution
            Output is an astropy.Quantity with the same units as y
+
+    sigma : astropy.Quantity
+            Only returned if err == True
+            The error estimate for A and B in the same units as y
     """
     # check if valid time series
     T = np.amax(t)-np.amin(t)
@@ -124,7 +132,11 @@ def compute_coefficients(m, t, y):
     M = np.transpose([ np.cos(mt), -1.*np.sin(mt) ]) # (N, 2)
     coeffs, resid, rank, s = np.linalg.lstsq(M, yval, rcond=None)
     A, B = coeffs
-    return A*unit, B*unit
+    if err:
+        sigma = np.sqrt(2.*resid[0])/len(yval)
+        return A*unit, B*unit, sigma*unit
+    else:
+        return A*unit, B*unit
         
 def loglikelihood(x, g, s, c):
     """
