@@ -4,11 +4,12 @@ This module for implementing a Maxwell-Boltzmann distribution
 
 from axionpy import units as u 
 from axionpy import axis as axs
+from axionpy.velocity import vsun
 import numpy as np
 
 # default distribution parameters
 _sigma = u.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
-_vo = u.toNaturalUnits(234.0*u.km/u.s).to_value(u.dimensionless_unscaled)
+_vo = u.toNaturalUnits(np.sqrt(np.sum(vsun**2))*u.km/u.s).to_value(u.dimensionless_unscaled)
 
 def _A_par(x, **kwargs):
     """

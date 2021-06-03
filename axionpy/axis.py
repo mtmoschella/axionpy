@@ -2,13 +2,14 @@ import numpy as np
 import astropy.coordinates as coord
 from astropy.time import Time
 from axionpy import units as u
+from axionpy.velocity import vsun, _u, _v, _w
 import matplotlib.pyplot as plt
 import scipy.interpolate as interp
 import util_toolkit as util
 import os
 from tqdm import tqdm
 
-from .velocity import vsun, _u, _v, _w
+
 
 def _is_quantity(q, t=None):
     """
