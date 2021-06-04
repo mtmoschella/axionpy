@@ -29,7 +29,7 @@ def _vobs(loc, t):
 
     Returns:
     ------------
-    v : numpy.ndarray of shape (3,)+np.shape(t)
+    v : astropy.Quantity of shape (3,)+np.shape(t)
         The velocity of the specified EarthLocation in Galactocentric (u,v,w) coordinates.
     """
     gcrs = loc.get_gcrs(t)
@@ -39,5 +39,5 @@ def _vobs(loc, t):
     vu = galactocentric.v_x.to_value(u.km/u.s)
     vv = galactocentric.v_y.to_value(u.km/u.s)
     vw = galactocentric.v_z.to_value(u.km/u.s)
-    return np.array([vu, vv, vw])
+    return np.array([vu, vv, vw])*u.km/u.s
     

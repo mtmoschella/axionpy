@@ -3,7 +3,6 @@ This module for implementing a Maxwell-Boltzmann distribution
 """
 
 from axionpy import units as u 
-from axionpy import axis as axs
 from axionpy.velocity import vsun
 import numpy as np
 
