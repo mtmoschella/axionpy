@@ -1,5 +1,5 @@
 """
-This module for implementing a Maxwell-Boltzmann distribution in the Galactic frame
+This module for implementing an arbitrary velocity distribution in the Galactic frame
 that accounts for the time-dependent motion of the Earth relativeto the Sun.
 """
 
@@ -167,12 +167,13 @@ def correlator(mode, m, t1, t2, **kwargs):
         verbose = False
         
     # convert velocities to dimensionless units
-    wmax = u.convert(1000.*u.km/u.s, u.dimensionless_unscaled, value=True)
     vobs_1 = u.convert(vobs_1, u.dimensionless_unscaled, value=True).reshape((nt,3)) # (nt,3)
     vobs_2 = u.convert(vobs_2, u.dimensionless_unscaled, value=True).reshape((nt,3)) # (nt,3)
-    
-    N = 100
 
+    # discretize velocity space
+    wmax = u.convert(1000.*u.km/u.s, u.dimensionless_unscaled, value=True)    
+    N = 100
+    
     wU_grid = np.linspace(-wmax, wmax, N) 
     wV_grid = np.linspace(-wmax, wmax, N)
     wW_grid = np.linspace(-wmax, wmax, N)
@@ -186,12 +187,14 @@ def correlator(mode, m, t1, t2, **kwargs):
     wvec = np.stack((wU, wV, wW),axis=-1) # (N, N, N, 3)
     fw = f(wvec) # (N, N, N)
 
+    # iterate over time
     output = np.zeros(nt)
     if verbose:
         iterator = tqdm(range(nt), desc="Computing Two-Point Correlation Function")
     else:
         iterator = range(nt)
     for i in iterator:
+        # build integrate
         v1 = wvec + vobs_1[i] # (N, N, N, 3)
         v2 = wvec + vobs_2[i] # (N, N, N, 3)
         vi = v1 @ ihat # (N, N, N) dot product
@@ -202,7 +205,9 @@ def correlator(mode, m, t1, t2, **kwargs):
         omega2 = 0.5*v2_squared*(m*t2_flat[i]).to_value(u.dimensionless_unscaled) # (N, N, N)
         integrand = vi*vj*fw*trig(omega2-omega1) # (N, N, N)
 
+        # integrate using 3-dimensional trapezoidal rule
         output[i] = (dU*dV*dW/8.)*np.sum(integrand[1:,1:,1:] + integrand[1:,1:,:-1] + integrand[1:,:-1,1:] + integrand[1:,:-1,:-1] + integrand[:-1,1:,1:] + integrand[:-1,1:,:-1] + integrand[:-1,:-1,1:] + integrand[:-1,:-1,:-1]) # scalar
 
+    # make sure to return output with correct shape
     return output.reshape(t_shape)
     
