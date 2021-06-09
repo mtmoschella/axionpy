@@ -17,7 +17,7 @@ import numpy as np
 import scipy.optimize as opt
 from scipy import stats
 from axionpy import units as u
-from axionpy import maxwell
+from axionpy.distributions import maxwell
 from axionpy import axis as ax
 from axionpy.constants import _rhodm
 from axionpy import matrix

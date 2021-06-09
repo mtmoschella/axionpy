@@ -12,7 +12,7 @@ import scipy.optimize as opt
 import scipy.stats as stats
 from scipy.special import i0
 from axionpy import units as u
-from axionpy.maxwell import _vo
+from axionpy.distributions.maxwell import _vo
 from axionpy.constants import _rhodm
 from axionpy.analysis.coherent_1d import compute_coefficients # compute coefficients works the same as in the coherent_1d analysis
 

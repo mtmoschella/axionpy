@@ -9,7 +9,7 @@ from scipy import stats
 from axionpy import units as u
 from axionpy.axis import Axis
 from axionpy.constants import _rhodm
-from axionpy.maxwell import _sigma, _vo
+from axionpy.distributions.maxwell import _sigma, _vo
 
 def compute_coefficients(m, t, y, **kwargs):
     """
