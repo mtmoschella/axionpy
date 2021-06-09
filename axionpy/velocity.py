@@ -29,7 +29,7 @@ def _vobs(loc, t):
 
     Returns:
     ------------
-    v : astropy.Quantity of shape (3,)+np.shape(t)
+    v : astropy.Quantity of shape np.shape(t)+(3,)
         The velocity of the specified EarthLocation in Galactocentric (u,v,w) coordinates.
     """
     gcrs = loc.get_gcrs(t)
@@ -39,5 +39,25 @@ def _vobs(loc, t):
     vu = galactocentric.v_x.to_value(u.km/u.s)
     vv = galactocentric.v_y.to_value(u.km/u.s)
     vw = galactocentric.v_z.to_value(u.km/u.s)
-    return np.array([vu, vv, vw])*u.km/u.s
+    return np.stack((vu, vv, vw), axis=-1)*u.km/u.s
     
+
+def _unit(arr):
+    """
+    arr: numpy ndarray
+    
+    Given ndarray of shape (n1, ..., nN)
+    Renormalize such that array can be interpreted 
+    as an (n2,...,nN) array of n1-dimensional unit vectors
+    """
+    return arr/np.sqrt(np.sum(arr**2, axis=0))
+
+###### default velocity basis
+# choose _zhat parallel to vsun
+# choose _xhat perpendicular to galactic North (out of the plane)
+# choose _yhat to complete RH coordinate system: _xhat x _yhat = _zhat
+#              _yhat = _zhat  _xhat
+_z = _unit(vsun)
+_x = np.cross(_z, _w)
+_y = np.cross(_z, _x)
+

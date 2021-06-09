@@ -2,7 +2,7 @@ import numpy as np
 import astropy.coordinates as coord
 from astropy.time import Time
 from axionpy import units as u
-from axionpy.velocity import vsun, _u, _v, _w
+from axionpy.velocity import vsun, _u, _v, _w, _x, _y, _z, _unit
 import matplotlib.pyplot as plt
 import scipy.interpolate as interp
 import util_toolkit as util
@@ -31,31 +31,11 @@ def _is_quantity(q, t=None):
         return q.unit.physical_type==t
     return True
 
-def _unit(arr):
-    """
-    arr: numpy ndarray
-    
-    Given ndarray of shape (n1, ..., nN)
-    Renormalize such that array can be interpreted 
-    as an (n2,...,nN) array of n1-dimensional unit vectors
-    """
-    return arr/np.sqrt(np.sum(arr**2, axis=0))
-
 # Earth-based coordinate basis
 _oEarth = coord.EarthLocation(x=0.*u.m, y=0.*u.m, z=0.*u.m)
 _xEarth = coord.EarthLocation(lon=0., lat=0., height=0.)
 _yEarth = coord.EarthLocation(lon=90., lat=0., height=0.)
 _zEarth = coord.EarthLocation(lon=0., lat=90., height=0.)
-
-###### default velocity basis
-# choose _zhat parallel to vsun
-# choose _xhat perpendicular to galactic North (out of the plane)
-# choose _yhat to complete RH coordinate system: _xhat x _yhat = _zhat
-#              _yhat = _zhat  _xhat
-_z = _unit(vsun)
-_x = np.cross(_z, _w)
-_y = np.cross(_z, _x)
-
 
 def _EarthLocation_to_Galactic(loc, t):
     """
@@ -208,7 +188,6 @@ class Axis:
                     out[:,start:stop] = self._dir(t[start:stop])
                 return out
 
-    #def components(self, N=None, dt=None, tgrid=None, start='2020-01-01T00:00:00', xhat=_x, yhat=_y, zhat=_z, tstep_min=0.5*u.hr, buffersize=int(1.e7), fname='components.dat', overwrite=False, pbar=True):    
     def components(self, **kwargs):
         """
         ===========================
