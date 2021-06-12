@@ -3,11 +3,14 @@ This module for implementing a Maxwell-Boltzmann distribution
 """
 
 from axionpy import units as u 
-from axionpy.velocity import vsun
+from axionpy.velocity import vcirc, vsun
 import numpy as np
 
-# default distribution parameters
-_sigma = u.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
+#### default distribution parameters
+# velocity dispersion
+_sigma = u.toNaturalUnits((vcirc/np.sqrt(2.))*u.km/u.s).to_value(u.dimensionless_unscaled)
+
+# speed of the observer, taken to be the velocity of the sun relative to GC
 _vo = u.toNaturalUnits(np.sqrt(np.sum(vsun**2))*u.km/u.s).to_value(u.dimensionless_unscaled)
 
 def _A_par(x, **kwargs):

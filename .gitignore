@@ -4,5 +4,7 @@
 !axionpy/*.py
 !axionpy/analysis/
 !axionpy/analysis/*.py
+!axionpy/distributions/
+!axionpy/distributions/*.py
 !tests/
 !tests/*.py

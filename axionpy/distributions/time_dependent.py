@@ -4,16 +4,17 @@ that accounts for the time-dependent motion of the Earth relativeto the Sun.
 """
 
 from axionpy import units as u 
-from axionpy.velocity import _vobs, _x, _y, _z
+from axionpy.velocity import vcirc, _vobs, _x, _y, _z
 import numpy as np
 import astropy.coordinates as coord
 from astropy.time import Time
 from tqdm import tqdm
 
-# default distribution parameters
-_sigma = u.toNaturalUnits(220.0*u.km/u.s).to_value(u.dimensionless_unscaled)
-
 _basis_vectors = {'x' : _x, 'y' : _y, 'z' :_z}
+
+### default distribution parameters
+# Maxwell-Boltzmann velocity dispersion
+_sigma = u.toNaturalUnits((vcirc/np.sqrt(2.))*u.km/u.s).to_value(u.dimensionless_unscaled)
 
 def maxwell_boltzmann_distribution(w):
     """
