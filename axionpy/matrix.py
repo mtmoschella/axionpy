@@ -18,7 +18,7 @@ class CovMatrix:
         positive = np.all(self.L>=0.)
         if not positive:
             # repair if all negative eigenvalues are smaller than 1.e-10*largest_eigenvalue
-            if np.absolute(np.amin(self.L))<1.e-10*np.amax(self.L):
+            if np.absolute(np.amin(self.L))<1.e-6*np.amax(self.L):
                 self.L[self.L<0.]= 0.
             else:
                 raise Exception("ERROR: cov matrix not positive semi-definite")
