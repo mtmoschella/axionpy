@@ -71,7 +71,7 @@ def correlator(mode, m, t1, t2, **kwargs):
         velocity in dimenionless units as argument.
         Must have call signature f(w) where w is a (3,...) arbitrary ndarray.
         Must return f such that (3,) + np.shape(f) == np.shape(w)
-        Defaults to a Maxwell-Boltzmann distribution with dispersion of 220 km/s
+        Defaults to a Maxwell-Boltzmann distribution with dispersion of 220/sqrt(2) km/s
 
     vobs_1 : (optional) astropy.Quantity array-like
              The velocity of the observer at times t1 in (u,v,w) coordinates.
